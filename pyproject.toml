@@ -43,11 +43,15 @@ dbwarden = "dbwarden.cli.main:main"
 dev = [
     "psycopg2-binary>=2.9.11",
     "pytest>=8.4.2",
+    "clickhouse-connect>=0.7.15",
 ]
 postgres = [
     "psycopg2-binary>=2.9.11",
 ]
 sqlite = [
+]
+clickhouse = [
+    "clickhouse-connect>=0.7.15",
 ]
 
 [tool.hatch.build.targets.wheel]
