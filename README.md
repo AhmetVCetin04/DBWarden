@@ -94,7 +94,9 @@ class ClickEvent(Base):
 The `info` dictionaries shown above allow you to pass ClickHouse-specific
 instructions (engine, ORDER BY keys, codecs, TTLs, custom data types, etc.)
 directly from SQLAlchemy models. When `database_type = "clickhouse"`, DBWarden
-uses those hints while generating SQL.
+uses those hints while generating SQL. This workflow has been validated in a
+production-style ClickHouse environment (`dbwarden init → make-migrations →
+migrate`) so ClickHouse deployments are now considered production ready.
 
 ## Complete Example
 
@@ -122,7 +124,7 @@ dbwarden config
 - PostgreSQL
 - SQLite
 - MySQL
-- ClickHouse (beta)
+- ClickHouse
 
 ### ClickHouse Quick Notes
 

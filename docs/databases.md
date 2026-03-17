@@ -9,7 +9,7 @@ DBWarden supports multiple database backends. This guide covers configuration an
 | PostgreSQL | Yes | `psycopg2-binary` |
 | MySQL | Yes | `mysql-connector-python` |
 | SQLite | Yes | Built-in |
-| ClickHouse | Beta | `clickhouse-connect` (HTTP) |
+| ClickHouse | Yes | `clickhouse-connect` (HTTP) |
 
 ## PostgreSQL
 
@@ -263,6 +263,23 @@ class ClickEvent(Base):
 During `make-migrations`, the generator converts SQLAlchemy types to ClickHouse
 types (Integer→Int32, Boolean→UInt8, etc.) and applies the metadata shown above,
 so the resulting SQL mirrors the ClickHouse expectations without manual edits.
+
+### Production Deployment Checklist
+
+1. **Provision the database** – create the target database in ClickHouse prior to
+   running `dbwarden migrate` (e.g., `CREATE DATABASE my_app`).
+2. **Use the HTTP driver** – configure `sqlalchemy_url = "clickhousedb+connect://…"`
+   and install `clickhouse-connect` on your application hosts and CI.
+3. **Set migration credentials** – DBWarden only needs DDL rights on the
+   migration database plus `ALTER TABLE` for lock/migration tables.
+4. **Validate repeatables** – repeatable migrations run via delete+insert; plan
+   for mutation lag on very large tables.
+5. **Run smoke tests** – apply migrations in a staging or sandbox database first
+   using the same `warden.toml` and Dockerized ClickHouse instance.
+
+Following these steps is what we use internally to simulate a production
+environment (full `dbwarden init → make-migrations → migrate` run against a
+dedicated ClickHouse instance) before deploying changes.
 
 ## Connection Pooling
 

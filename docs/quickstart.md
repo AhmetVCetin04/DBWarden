@@ -226,6 +226,12 @@ Or rollback to a specific version:
 dbwarden rollback --to-version 0001
 ```
 
+> **ClickHouse deployments:** The same workflow (init, make-migrations,
+> migrate, rollback) has been exercised end-to-end against a dedicated
+> ClickHouse instance using `clickhousedb+connect` so you can follow this guide
+> for production ClickHouse environments as well. Just remember to create the
+> target database in ClickHouse before running `dbwarden migrate`.
+
 ## Step 13: Check Database Schema
 
 Inspect your current database schema:
