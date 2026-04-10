@@ -1,3 +1,4 @@
+from dbwarden.config import get_database
 from dbwarden.engine.version import get_migrations_directory
 from dbwarden.logging import get_logger
 from dbwarden.repositories import get_migration_records, migrations_table_exists
@@ -14,7 +15,11 @@ def diff_cmd(
         verbose: Enable verbose logging.
         database: Target database name.
     """
-    logger = get_logger(verbose=verbose)
+    config = get_database(database)
+    actual_db_name = database or config.sqlalchemy_url.split("/")[-1].split("?")[0]
+    logger = get_logger(
+        verbose=verbose, db_name=actual_db_name, db_type=config.database_type
+    )
 
     if not migrations_table_exists(database):
         print("No migrations table found. Run 'dbwarden migrate' first.")
@@ -35,7 +40,11 @@ def squash_cmd(verbose: bool = False, database: str | None = None) -> None:
         verbose: Enable verbose logging.
         database: Target database name.
     """
-    logger = get_logger(verbose=verbose)
+    config = get_database(database)
+    actual_db_name = database or config.sqlalchemy_url.split("/")[-1].split("?")[0]
+    logger = get_logger(
+        verbose=verbose, db_name=actual_db_name, db_type=config.database_type
+    )
 
     from dbwarden.repositories import get_migration_records
 

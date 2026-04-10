@@ -26,7 +26,11 @@ def rollback_cmd(
         verbose: Enable verbose logging.
         database: Target database name.
     """
-    logger = get_logger(verbose=verbose)
+    config = get_database(database)
+    actual_db_name = database or config.sqlalchemy_url.split("/")[-1].split("?")[0]
+    logger = get_logger(
+        verbose=verbose, db_name=actual_db_name, db_type=config.database_type
+    )
 
     if count is not None and to_version is not None:
         raise ValueError("Cannot specify both 'count' and 'to-version'.")
