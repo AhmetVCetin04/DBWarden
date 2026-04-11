@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../assets/icon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
     
     
       
@@ -684,6 +684,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#database-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Database Management
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#migration-management" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -740,6 +751,45 @@
       
     </span>
   </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#multi-database-flags" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multi-Database Flags
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Multi-Database Flags">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#-d-database-name" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        -d, --database NAME
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-all" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --all
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1596,6 +1646,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#database-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Database Management
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#migration-management" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1652,6 +1713,45 @@
       
     </span>
   </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#multi-database-flags" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multi-Database Flags
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Multi-Database Flags">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#-d-database-name" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        -d, --database NAME
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-all" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --all
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2009,6 +2109,29 @@
 </tr>
 </tbody>
 </table>
+<h3 id="database-management">Database Management<a class="headerlink" href="#database-management" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="database/">database list</a></td>
+<td>List all configured databases</td>
+</tr>
+<tr>
+<td><a href="database/">database add</a></td>
+<td>Add a new database configuration</td>
+</tr>
+<tr>
+<td><a href="database/">database remove</a></td>
+<td>Remove a database configuration</td>
+</tr>
+</tbody>
+</table>
 <h3 id="migration-management">Migration Management<a class="headerlink" href="#migration-management" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -2121,6 +2244,24 @@
 </tr>
 </tbody>
 </table>
+<h2 id="multi-database-flags">Multi-Database Flags<a class="headerlink" href="#multi-database-flags" title="Permanent link">&para;</a></h2>
+<h3 id="-d-database-name"><code>-d, --database NAME</code><a class="headerlink" href="#-d-database-name" title="Permanent link">&para;</a></h3>
+<p>Target a specific database (available on most commands):</p>
+<ul>
+<li><code>migrate</code></li>
+<li><code>rollback</code></li>
+<li><code>status</code></li>
+<li><code>history</code></li>
+<li><code>make-migrations</code></li>
+<li><code>check-db</code></li>
+<li><code>diff</code></li>
+</ul>
+<h3 id="-all"><code>--all</code><a class="headerlink" href="#-all" title="Permanent link">&para;</a></h3>
+<p>Operate on all configured databases:</p>
+<ul>
+<li><code>migrate --all</code></li>
+<li><code>rollback --all</code></li>
+</ul>
 <h2 id="command-flags-reference">Command Flags Reference<a class="headerlink" href="#command-flags-reference" title="Permanent link">&para;</a></h2>
 <h3 id="commands-with-v-verbose">Commands with <code>-v, --verbose</code><a class="headerlink" href="#commands-with-v-verbose" title="Permanent link">&para;</a></h3>
 <p>Enable verbose logging:

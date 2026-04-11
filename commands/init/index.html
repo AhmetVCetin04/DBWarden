@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/icon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
     
     
       
@@ -711,6 +711,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Options
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-it-does" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -748,6 +759,17 @@
     <span class="md-ellipsis">
       
         Directory Structure
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adding-multiple-databases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding Multiple Databases
       
     </span>
   </a>
@@ -1284,6 +1306,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Options
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-it-does" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1321,6 +1354,17 @@
     <span class="md-ellipsis">
       
         Directory Structure
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adding-multiple-databases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding Multiple Databases
       
     </span>
   </a>
@@ -1375,46 +1419,82 @@
 <p>The <code>init</code> command creates the <code>migrations/</code> directory and a <code>warden.toml</code> config file. This is the first command you run when setting up DBWarden in a new project.</p>
 <h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h2>
 <div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>init
+dbwarden<span class="w"> </span>init<span class="w"> </span>--database<span class="w"> </span>primary
 </code></pre></div>
 
+<h2 id="options">Options<a class="headerlink" href="#options" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--database</code>, <code>-d</code></td>
+<td>Database name to create migration directory for</td>
+</tr>
+</tbody>
+</table>
 <h2 id="what-it-does">What It Does<a class="headerlink" href="#what-it-does" title="Permanent link">&para;</a></h2>
 <ol>
 <li>Creates a <code>warden.toml</code> configuration file (if it doesn't exist)</li>
-<li>Creates a <code>migrations/</code> directory in the current working directory</li>
+<li>Creates a <code>migrations/&lt;name&gt;/</code> directory for the default database</li>
 <li>Sets up the directory structure for storing migration files</li>
 <li>Does NOT create any database tables or modify the database</li>
 </ol>
 <h2 id="example">Example<a class="headerlink" href="#example" title="Permanent link">&para;</a></h2>
 <div class="codehilite"><pre><span></span><code>$<span class="w"> </span>dbwarden<span class="w"> </span>init
 Created<span class="w"> </span>configuration<span class="w"> </span>file:<span class="w"> </span>/home/user/myproject/warden.toml
-DBWarden<span class="w"> </span>migrations<span class="w"> </span>directory<span class="w"> </span>created:<span class="w"> </span>/home/user/myproject/migrations
+DBWarden<span class="w"> </span>migrations<span class="w"> </span>directory<span class="w"> </span>created:<span class="w"> </span>/home/user/myproject/migrations/default
 
 Next<span class="w"> </span>steps:
-<span class="w">  </span><span class="m">1</span>.<span class="w"> </span>Edit<span class="w"> </span>warden.toml<span class="w"> </span>with<span class="w"> </span>your<span class="w"> </span>database<span class="w"> </span>connection<span class="w"> </span>URL
-<span class="w">  </span><span class="m">2</span>.<span class="w"> </span>Run<span class="w"> </span><span class="s1">&#39;dbwarden make-migrations&#39;</span><span class="w"> </span>to<span class="w"> </span>generate<span class="w"> </span>migrations<span class="w"> </span>from<span class="w"> </span>your<span class="w"> </span>models
+<span class="w">  </span><span class="m">1</span>.<span class="w"> </span>Edit<span class="w"> </span>warden.toml<span class="w"> </span>with<span class="w"> </span>your<span class="w"> </span>database<span class="w"> </span>connection<span class="w"> </span>URLs
+<span class="w">  </span><span class="m">2</span>.<span class="w"> </span>Run<span class="w"> </span><span class="s1">&#39;dbwarden make-migrations -d &lt;name&gt;&#39;</span><span class="w"> </span>to<span class="w"> </span>generate<span class="w"> </span>migrations
 </code></pre></div>
 
 <h2 id="generated-wardentoml">Generated warden.toml<a class="headerlink" href="#generated-wardentoml" title="Permanent link">&para;</a></h2>
-<p>The command creates a starter configuration:</p>
+<p>The command creates a starter configuration with the new multi-database format:</p>
 <div class="codehilite"><pre><span></span><code><span class="c1"># DBWarden Configuration</span>
-<span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite:///./mydb.db&quot;</span>
+<span class="c1"># See documentation: https://emiliano-gandini-outeda.me/DBWarden/</span>
 
-<span class="c1"># Optional: PostgreSQL schema to use</span>
+<span class="c1"># Default database</span>
+<span class="n">default</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;default&quot;</span>
+
+<span class="c1"># Database configurations</span>
+<span class="k">[database]</span>
+<span class="k">[database.default]</span>
+<span class="c1"># Database type: sqlite, postgresql, mysql, mariadb, clickhouse</span>
+<span class="n">database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite&quot;</span>
+<span class="c1"># Database connection URL (required)</span>
+<span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite:///./development.db&quot;</span>
+
+<span class="c1"># PostgreSQL schema (optional, only for postgresql)</span>
 <span class="c1"># postgres_schema = &quot;public&quot;</span>
 
-<span class="c1"># Optional: Paths to SQLAlchemy model files for automatic migration generation</span>
-<span class="c1"># model_paths = [&quot;models/&quot;]</span>
+<span class="c1"># Paths to SQLAlchemy models for auto-migration (optional)</span>
+<span class="c1"># model_paths = [&quot;app/models/&quot;]</span>
+
+<span class="c1"># Migration directory (optional, defaults to &quot;migrations/&lt;name&gt;&quot;)</span>
+<span class="c1"># migrations_dir = &quot;migrations/default&quot;</span>
 </code></pre></div>
 
 <h2 id="directory-structure">Directory Structure<a class="headerlink" href="#directory-structure" title="Permanent link">&para;</a></h2>
 <p>After running <code>init</code>, your project structure will look like:</p>
 <div class="codehilite"><pre><span></span><code>myproject/
-├── migrations/          # Created by init command
-│   └── .gitkeep        # Placeholder file
+├── migrations/
+│   └── default/           # Created by init command
 ├── models/
 │   └── user.py
-├── warden.toml         # Created by init command
+├── warden.toml            # Created by init command
 └── app.py
+</code></pre></div>
+
+<h2 id="adding-multiple-databases">Adding Multiple Databases<a class="headerlink" href="#adding-multiple-databases" title="Permanent link">&para;</a></h2>
+<p>After init, use <code>dbwarden database add</code> to add more databases:</p>
+<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>database<span class="w"> </span>add<span class="w"> </span>analytics<span class="w"> </span>--url<span class="w"> </span><span class="s2">&quot;postgresql://user:pass@localhost:5432/analytics&quot;</span>
+dbwarden<span class="w"> </span>database<span class="w"> </span>add<span class="w"> </span>legacy<span class="w"> </span>--url<span class="w"> </span><span class="s2">&quot;mysql://user:pass@localhost:3306/legacy&quot;</span>
 </code></pre></div>
 
 <h2 id="important-notes">Important Notes<a class="headerlink" href="#important-notes" title="Permanent link">&para;</a></h2>
@@ -1422,12 +1502,14 @@ Next<span class="w"> </span>steps:
 <li><strong>No database changes</strong>: This command only creates local files</li>
 <li><strong>Safe to run multiple times</strong>: Running <code>init</code> again is safe; it won't overwrite existing migrations or warden.toml</li>
 <li><strong>Required before other commands</strong>: Most DBWarden commands require the migrations directory to exist</li>
+<li><strong>Creates default database</strong>: The first database created is named "default" and uses SQLite</li>
 </ul>
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../make-migrations/">make-migrations</a>: Generate migrations from models</li>
 <li><a href="../new/">new</a>: Create manual migrations</li>
 <li><a href="../../configuration/">Configuration</a>: Full configuration guide</li>
+<li><a href="../../databases/">Databases</a>: Supported databases</li>
 </ul>
 
 
