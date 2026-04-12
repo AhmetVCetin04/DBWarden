@@ -299,7 +299,7 @@ def migrate_cmd(
                 )
             except Exception as e:
                 print(f"Error migrating database '{db_name}': {e}")
-                raise
+                continue
     else:
         migrate_single(
             db_name=database,
