@@ -287,6 +287,99 @@ MYSQL_QUERIES = {
 }
 
 
+CLICKHOUSE_QUERIES = {
+    QueryMethod.CREATE_MIGRATIONS_TABLE: """
+        CREATE TABLE IF NOT EXISTS dbwarden_migrations (
+            id UInt64,
+            version String,
+            description String,
+            filename String,
+            migration_type String,
+            applied_at DateTime DEFAULT now(),
+            checksum String
+        ) ENGINE = MergeTree()
+        ORDER BY id
+    """,
+    QueryMethod.CREATE_LOCK_TABLE: """
+        CREATE TABLE IF NOT EXISTS dbwarden_lock (
+            id Int32,
+            locked UInt8 DEFAULT 0,
+            acquired_at Nullable(DateTime)
+        ) ENGINE = MergeTree()
+        ORDER BY id
+    """,
+    QueryMethod.INSERT_VERSION: """
+        INSERT INTO dbwarden_migrations (id, version, description, filename, migration_type, checksum)
+        VALUES (:id, :version, :description, :filename, :migration_type, :checksum)
+    """,
+    QueryMethod.DELETE_VERSION: """
+        ALTER TABLE dbwarden_migrations DELETE WHERE version = :version
+    """,
+    QueryMethod.GET_ALL_MIGRATIONS: """
+        SELECT id, version, description, filename, migration_type, applied_at, checksum
+        FROM dbwarden_migrations
+        ORDER BY applied_at ASC
+    """,
+    QueryMethod.GET_LATEST_VERSION: """
+        SELECT id, version, description, filename, migration_type, applied_at, checksum
+        FROM dbwarden_migrations
+        WHERE version IS NOT NULL
+        ORDER BY applied_at DESC
+        LIMIT 1
+    """,
+    QueryMethod.GET_MIGRATED_VERSIONS: """
+        SELECT version FROM dbwarden_migrations
+        WHERE version IS NOT NULL
+        ORDER BY applied_at ASC
+    """,
+    QueryMethod.CHECK_IF_MIGRATIONS_TABLE_EXISTS: """
+        SELECT name FROM system.tables
+        WHERE database = currentDatabase() AND name = 'dbwarden_migrations'
+    """,
+    QueryMethod.CHECK_IF_VERSION_EXISTS: """
+        SELECT count() FROM dbwarden_migrations WHERE version = :version
+    """,
+    QueryMethod.ACQUIRE_LOCK: """
+        ALTER TABLE dbwarden_lock UPDATE locked = 1, acquired_at = now() WHERE id = 1
+    """,
+    QueryMethod.RELEASE_LOCK: """
+        ALTER TABLE dbwarden_lock UPDATE locked = 0, acquired_at = NULL WHERE id = 1
+    """,
+    QueryMethod.CHECK_LOCK: """
+        SELECT locked FROM dbwarden_lock WHERE id = 1
+    """,
+    QueryMethod.GET_TABLE_NAMES: """
+        SELECT name FROM system.tables
+        WHERE database = currentDatabase()
+        ORDER BY name
+    """,
+    QueryMethod.GET_TABLE_COLUMNS: """
+        SELECT name, type, is_nullable, default_expression
+        FROM system.columns
+        WHERE database = currentDatabase() AND table = :table_name
+    """,
+    QueryMethod.GET_TABLE_INDEXES: """
+        SELECT name, expression FROM system.data_skipping_indices
+        WHERE database = currentDatabase() AND table = :table_name
+    """,
+    QueryMethod.GET_RUNS_ON_CHANGE_CHECKSUMS: """
+        SELECT filename, checksum FROM dbwarden_migrations
+        WHERE migration_type = 'runs_on_change'
+    """,
+    QueryMethod.GET_RUNS_ALWAYS_FILENAMES: """
+        SELECT filename FROM dbwarden_migrations
+        WHERE migration_type = 'runs_always'
+    """,
+    QueryMethod.UPSERT_REPEATABLE_MIGRATION: """
+        INSERT INTO dbwarden_migrations (version, description, filename, migration_type, checksum)
+        VALUES (NULL, :description, :filename, :migration_type, :checksum)
+    """,
+    QueryMethod.DELETE_REPEATABLE_BY_FILENAME: """
+        ALTER TABLE dbwarden_migrations DELETE WHERE filename = :filename AND migration_type IN ('runs_always', 'runs_on_change')
+    """,
+}
+
+
 def _get_backend_name(db_name: str | None = None) -> str:
     try:
         config = get_database(db_name)
@@ -299,8 +392,10 @@ def _get_queries_for_backend(db_name: str | None = None) -> dict:
     backend = _get_backend_name(db_name)
     if backend == "postgresql":
         return POSTGRES_QUERIES
-    if backend in ("mysql", "mariadb", "clickhouse"):
+    if backend in ("mysql", "mariadb"):
         return MYSQL_QUERIES
+    if backend == "clickhouse":
+        return CLICKHOUSE_QUERIES
     return SQLITE_QUERIES
 
 
