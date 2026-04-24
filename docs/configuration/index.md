@@ -1,0 +1,253 @@
+# Configuration
+
+DBWarden uses Python-based configuration with `database_config()` to define your databases.
+
+**One configuration source** for migrations, CLI tools, and runtime → no split configs.
+
+## Quick Start
+
+The simplest configuration possible:
+
+```python
+# dbwarden.py
+from dbwarden import database_config
+
+database_config(
+    database_name="primary",
+    default=True,
+    database_type="sqlite",
+    database_url="sqlite:///./app.db",
+)
+```
+
+That's it! **4 parameters** to get started.
+
+Run your first migration:
+
+```bash
+dbwarden init
+dbwarden make-migrations "initial schema"
+dbwarden migrate
+```
+
+## Learning Path
+
+### New to DBWarden?
+Start here to understand configuration basics:
+
+1. **[Quick Start](quick-start.md)** - Your first configuration in 2 minutes
+2. **[Concepts](concepts.md)** - How configuration works
+3. **[Connection URLs](connection-urls.md)** - Database connection formats
+
+### Building Your Configuration
+Learn specific features:
+
+- **[Model Discovery](model-discovery.md)** - How DBWarden finds your SQLAlchemy models
+- **[Dev Mode](dev-mode.md)** - Local development with SQLite
+- **[Multi-Database](multi-database.md)** - Configure multiple databases
+
+### Production Ready
+Deploy with confidence:
+
+- **[Production Patterns](production-patterns.md)** - Real-world examples
+- **[Troubleshooting](troubleshooting.md)** - Common issues and solutions
+
+### Complete Reference
+- **[Configuration API](../reference/configuration-api.md)** - Complete function signature and parameters
+
+## Key Features
+
+### 🚀 Simple Configuration
+
+Define once, use everywhere:
+
+```python
+database_config(
+    database_name="primary",
+    default=True,
+    database_type="postgresql",
+    database_url="postgresql://localhost/myapp",
+    model_paths=["app.models"],
+)
+```
+
+### 🔧 Dev Mode
+
+Use SQLite locally, PostgreSQL in production:
+
+```python
+database_config(
+    database_name="primary",
+    default=True,
+    database_type="postgresql",
+    database_url="postgresql://localhost/myapp",
+    dev_database_type="sqlite",
+    dev_database_url="sqlite:///./dev.db",
+)
+```
+
+Run commands with `--dev`:
+
+```bash
+dbwarden --dev migrate
+dbwarden --dev status
+```
+
+### 🗄️ Multi-Database
+
+Configure as many databases as you need:
+
+```python
+# Primary database
+database_config(
+    database_name="primary",
+    default=True,
+    database_type="postgresql",
+    database_url="postgresql://localhost/main",
+    model_paths=["app.models.primary"],
+)
+
+# Analytics database
+database_config(
+    database_name="analytics",
+    database_type="clickhouse",
+    database_url="http://localhost:8123/analytics",
+    model_paths=["app.models.analytics"],
+)
+```
+
+### 🔒 Security First
+
+Keep credentials out of code:
+
+```python
+import os
+
+database_config(
+    database_name="primary",
+    default=True,
+    database_type="postgresql",
+    database_url=os.getenv("DATABASE_URL"),
+    secure_values=True,  # Hide credentials in output
+)
+```
+
+### ✅ Validation
+
+DBWarden validates your configuration:
+
+- ✅ Exactly one `default=True`
+- ✅ Unique database names
+- ✅ No duplicate URLs
+- ✅ Required `model_paths` for multi-database
+- ✅ Consistent dev mode configuration
+
+## Configuration Loading
+
+DBWarden discovers your configuration automatically:
+
+1. **Looks for `dbwarden.py`** in current directory or parents
+2. **Scans for `database_config()` calls** in your codebase
+3. **Checks `DBWARDEN_CONFIG_MODULE`** environment variable
+
+Place `dbwarden.py` in your project root for best results.
+
+## Common Patterns
+
+### Single Database (Minimal)
+
+```python
+from dbwarden import database_config
+
+database_config(
+    database_name="primary",
+    default=True,
+    database_type="postgresql",
+    database_url="postgresql://localhost/myapp",
+)
+```
+
+### With Dev Mode (Recommended)
+
+```python
+from dbwarden import database_config
+
+database_config(
+    database_name="primary",
+    default=True,
+    database_type="postgresql",
+    database_url="postgresql://localhost/myapp",
+    dev_database_type="sqlite",
+    dev_database_url="sqlite:///./dev.db",
+    model_paths=["app.models"],
+)
+```
+
+### Multiple Databases
+
+```python
+from dbwarden import database_config
+
+# Primary
+database_config(
+    database_name="primary",
+    default=True,
+    database_type="postgresql",
+    database_url="postgresql://localhost/main",
+    model_paths=["app.models.primary"],
+)
+
+# Analytics
+database_config(
+    database_name="analytics",
+    database_type="postgresql",
+    database_url="postgresql://localhost/analytics",
+    model_paths=["app.models.analytics"],
+)
+```
+
+### Production with Environment Variables
+
+```python
+import os
+from dbwarden import database_config
+
+database_config(
+    database_name="primary",
+    default=True,
+    database_type="postgresql",
+    database_url=os.getenv("DATABASE_URL"),
+    model_paths=["app.models"],
+    secure_values=True,
+)
+```
+
+## Why Python Configuration?
+
+**vs TOML/YAML/INI:**
+- ✅ Type checking with your IDE
+- ✅ Dynamic configuration (loops, conditionals)
+- ✅ Environment variable integration
+- ✅ No schema mismatches
+- ✅ Can compute values
+
+**vs Environment Variables Only:**
+- ✅ Version controlled
+- ✅ Self-documenting
+- ✅ Validation at load time
+- ✅ Multiple databases easy
+- ✅ Can reference code structures
+
+## What's Next?
+
+Ready to configure your first database? Start here:
+
+- **[Quick Start](quick-start.md)** - Build your first configuration
+- **[Concepts](concepts.md)** - Understand how it works
+- **[Production Patterns](production-patterns.md)** - Real-world examples
+
+Already familiar with configuration? Jump to:
+
+- **[Connection URLs](connection-urls.md)** - URL format reference
+- **[Troubleshooting](troubleshooting.md)** - Common issues
+- **[Configuration API](../reference/configuration-api.md)** - Complete reference

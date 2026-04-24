@@ -22,8 +22,18 @@ nav:
       - Introduction: getting-started/introduction.md
       - Installation: installation.md
       - First Steps: getting-started/first-steps.md
-  - Tutorial - User Guide:
-      - Configuration: configuration.md
+  - Configuration:
+      - Overview: configuration/index.md
+      - Quick Start: configuration/quick-start.md
+      - Concepts: configuration/concepts.md
+      - Connection URLs: configuration/connection-urls.md
+      - Model Discovery: configuration/model-discovery.md
+      - Dev Mode: configuration/dev-mode.md
+      - Multi-Database: configuration/multi-database.md
+      - Production Patterns: configuration/production-patterns.md
+      - Troubleshooting: configuration/troubleshooting.md
+      - Legacy Docs: configuration.md
+  - User Guide:
       - Your First Migration: tutorial/your-first-migration.md
       - Applying Migrations: tutorial/applying-migrations.md
       - Rolling Back: tutorial/rolling-back.md
@@ -31,11 +41,27 @@ nav:
       - Dev Mode: tutorial/dev-mode.md
       - Multi-Database Setup: tutorial/multi-database-setup.md
   - FastAPI Integration:
-      - Overview: fastapi/overview.md
-      - get_session: fastapi/get-session.md
-      - migration_context: fastapi/migration-context.md
-      - DBWardenHealthRouter: fastapi/health-router.md
-      - Full Example: fastapi/full-example.md
+      - Overview: fastapi/index.md
+      - Tutorial:
+          - First Steps: fastapi/tutorial/first-steps.md
+          - Session Dependency: fastapi/tutorial/session-dependency.md
+          - Startup Checks: fastapi/tutorial/startup-checks.md
+          - Health Endpoints: fastapi/tutorial/health-endpoints.md
+          - Complete Application: fastapi/tutorial/complete-application.md
+      - Advanced:
+          - Multi-Database: fastapi/advanced/multi-database.md
+          - Testing: fastapi/advanced/testing.md
+          - Transaction Management: fastapi/advanced/transaction-management.md
+          - Engine Lifecycle: fastapi/advanced/engine-lifecycle.md
+          - Production Patterns: fastapi/advanced/production-patterns.md
+      - Concepts: fastapi/concepts.md
+      - API Reference: fastapi/reference.md
+      - Legacy Docs:
+          - Overview (Old): fastapi/overview.md
+          - get_session (Old): fastapi/get-session.md
+          - migration_context (Old): fastapi/migration-context.md
+          - DBWardenHealthRouter (Old): fastapi/health-router.md
+          - Full Example (Old): fastapi/full-example.md
   - Advanced User Guide:
       - Migration File Format: migration-files.md
       - SQL Translation: sql-translation.md

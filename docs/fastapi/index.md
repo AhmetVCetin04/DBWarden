@@ -1,0 +1,142 @@
+# FastAPI Integration
+
+DBWarden provides first-class FastAPI integration for database sessions, health checks, and migration management.
+
+**One configuration source** for both migrations and runtime → no more split configs.
+
+## Quick Start
+
+Install the FastAPI integration:
+
+```bash
+pip install "dbwarden[fastapi]"
+```
+
+Create your first FastAPI app with DBWarden:
+
+```python
+from fastapi import FastAPI
+from dbwarden.fastapi import get_session, migration_context
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    async with migration_context(mode="check"):
+        yield
+
+app = FastAPI(lifespan=lifespan)
+```
+
+That's it! **5 lines** to integrate DBWarden.
+
+## Tutorial - First Steps
+
+New to DBWarden's FastAPI integration? Start with these tutorials:
+
+1. **[First Steps](tutorial/first-steps.md)** - Get started in 2 minutes
+2. **[Session Dependency](tutorial/session-dependency.md)** - Database sessions in routes
+3. **[Startup Checks](tutorial/startup-checks.md)** - Validate migrations on boot
+4. **[Health Endpoints](tutorial/health-endpoints.md)** - Runtime health monitoring
+5. **[Complete Application](tutorial/complete-application.md)** - Full working example
+
+## Advanced User Guide
+
+Ready for more? Learn advanced patterns:
+
+- **[Multi-Database](advanced/multi-database.md)** - Work with multiple databases
+- **[Testing](advanced/testing.md)** - Override dependencies and test isolation
+- **[Transaction Management](advanced/transaction-management.md)** - Commits, rollbacks, savepoints
+- **[Engine Lifecycle](advanced/engine-lifecycle.md)** - Caching, pooling, disposal
+- **[Production Patterns](advanced/production-patterns.md)** - Kubernetes, CI/CD, monitoring
+
+## Learn
+
+Understanding the concepts behind DBWarden's FastAPI integration:
+
+- **[Concepts](concepts.md)** - High-level explanations of how it works
+- **[API Reference](reference.md)** - Complete function signatures and parameters
+
+## Key Features
+
+### 🚀 Session Dependency
+
+Get SQLAlchemy `AsyncSession` in your routes with proper lifecycle management:
+
+```python
+from typing import Annotated
+from fastapi import Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+from dbwarden.fastapi import get_session
+
+SessionDep = Annotated[AsyncSession, Depends(get_session())]
+
+@app.get("/users")
+async def list_users(session: SessionDep):
+    result = await session.execute(select(User))
+    return result.scalars().all()
+```
+
+- ✅ Automatic engine creation and caching
+- ✅ Request-scoped sessions
+- ✅ Automatic cleanup and error handling
+- ✅ Multi-database support
+
+### 🏥 Health Endpoints
+
+Production-ready health checks out of the box:
+
+```python
+from dbwarden.fastapi import DBWardenHealthRouter
+
+app.include_router(DBWardenHealthRouter(), prefix="/health")
+```
+
+- ✅ Database connectivity checks
+- ✅ Migration state monitoring
+- ✅ Kubernetes liveness/readiness probes
+- ✅ Per-database health status
+
+### 🔧 Startup Validation
+
+Ensure your database is ready before accepting traffic:
+
+```python
+from contextlib import asynccontextmanager
+from dbwarden.fastapi import migration_context
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    async with migration_context(mode="check", fail_fast=True):
+        yield
+
+app = FastAPI(lifespan=lifespan)
+```
+
+- ✅ Connectivity validation
+- ✅ Migration state checks
+- ✅ Optional auto-migration on startup
+- ✅ Dev/prod environment awareness
+
+## Why Use DBWarden with FastAPI?
+
+**Without DBWarden**, you typically have:
+- One config for migrations (Alembic, etc.)
+- Another config for your FastAPI app (engines, sessions)
+- Manual startup checks
+- Custom health endpoints
+
+**With DBWarden**, you have:
+- **One configuration source** for everything
+- Sessions sourced from your migration config
+- Built-in startup validation
+- Production-ready health endpoints
+
+**Result:** Less boilerplate, fewer bugs, easier maintenance.
+
+## Navigation
+
+Ready to start? Head to **[First Steps](tutorial/first-steps.md)** to build your first app.
+
+Already know the basics? Jump to **[Advanced User Guide](#advanced-user-guide)**.
+
+Looking for something specific? Check the **[API Reference](reference.md)**.

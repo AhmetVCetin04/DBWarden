@@ -1,8 +1,53 @@
 # Configuration
 
+!!! note "Documentation Reorganized"
+    The configuration documentation has been reorganized into a comprehensive guide. This page now redirects to the new structure.
+
+## 📚 New Documentation Structure
+
+The configuration documentation is now organized into:
+
+- **[Getting Started](configuration/index.md)** - Landing page with overview
+- **[Quick Start](configuration/quick-start.md)** - Your first configuration in 2 minutes
+- **[Concepts](configuration/concepts.md)** - How configuration works
+- **[Connection URLs](configuration/connection-urls.md)** - Database URL formats
+- **[Model Discovery](configuration/model-discovery.md)** - How `model_paths` works
+- **[Dev Mode](configuration/dev-mode.md)** - Local development patterns
+- **[Multi-Database](configuration/multi-database.md)** - Multiple databases
+- **[Production Patterns](configuration/production-patterns.md)** - Real-world examples
+- **[Troubleshooting](configuration/troubleshooting.md)** - Common issues
+- **[API Reference](reference/configuration-api.md)** - Complete function signature
+
+## 🚀 Quick Links
+
+### New to DBWarden Configuration?
+Start here: **[Quick Start](configuration/quick-start.md)**
+
+### Looking for Specific Information?
+
+| Need | Go To |
+|------|-------|
+| First configuration | **[Quick Start](configuration/quick-start.md)** |
+| Understand how it works | **[Concepts](configuration/concepts.md)** |
+| Database URL formats | **[Connection URLs](configuration/connection-urls.md)** |
+| Model discovery | **[Model Discovery](configuration/model-discovery.md)** |
+| Dev mode setup | **[Dev Mode](configuration/dev-mode.md)** |
+| Multiple databases | **[Multi-Database](configuration/multi-database.md)** |
+| Production examples | **[Production Patterns](configuration/production-patterns.md)** |
+| Fix configuration errors | **[Troubleshooting](configuration/troubleshooting.md)** |
+| Complete parameter list | **[API Reference](reference/configuration-api.md)** |
+
+---
+
+**[→ Go to Configuration Home](configuration/index.md)**
+
+---
+
+## Quick Reference (Legacy)
+
 DBWarden uses Python configuration through `database_config(...)` calls.
 
-This page shows all configuration options. For a step-by-step workflow, see the [Tutorial](tutorial/your-first-migration.md).
+For complete documentation, see the [Configuration Guide](configuration/index.md).
 
 ## Single database example
 
