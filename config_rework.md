@@ -40,7 +40,7 @@ Multiple calls are allowed (one call per database configuration).
 7. `model_paths` must be present when total configured databases > 1.
 8. `migrations_dir` default is `migrations/<database_name>`.
 9. Model path overlap across databases is forbidden by default.
-10. Model path overlap is allowed only when `overlap_models=True` is set.
+10. `overlap_models=True` allows a DB to accept paths from other databases.
 11. Source resolution order:
     - discover `dbwarden.py`
     - fallback to full repo scan for `database_config(`
@@ -138,12 +138,15 @@ Keep existing target collision checks:
 
 Overlap behavior:
 
-- Default (`overlap_models=False`): no path intersection with any other DB's `model_paths`
-- If `overlap_models=True` on a DB, that DB may overlap with others
+- `overlap_models=True` on a DB means **that DB accepts model paths from other databases running on it**
+- It does **NOT** grant permission for that DB's own model paths to appear in other databases
+- For a given path collision between DB A and DB B:
+  - If path belongs to A but appears in B's `model_paths`: B must set `overlap_models=True`
+  - If path belongs to B but appears in A's `model_paths`: A must set `overlap_models=True`
 
 Error example:
 
-- `model_paths overlap detected between 'primary' and 'analytics'; set overlap_models=True to allow`
+- `model_paths overlap detected: path 'models/shared' from 'analytics' is also defined in 'primary'; set overlap_models=True on 'primary' to allow foreign paths`
 
 ---
 
@@ -353,7 +356,7 @@ Required clear errors:
 - `Duplicate database_url '<url>'`
 - `Duplicate migrations_dir '<dir>'`
 - `Duplicate dev_database_url '<url>'`
-- `model_paths overlap detected between '<a>' and '<b>'; set overlap_models=True to allow`
+- `model_paths overlap detected: path '<path>' from '<db>' is also defined in '<other>'; set overlap_models=True on '<other>' to allow foreign paths`
 
 All errors should include source location when available (file path and line number).
 
