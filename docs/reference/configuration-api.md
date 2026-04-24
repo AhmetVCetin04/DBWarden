@@ -1,8 +1,14 @@
-# Configuration API
+# Configuration API Reference
 
-`database_config(...)` defines a database entry in your Python config source.
+Complete reference for the `database_config()` function.
 
-## Function signature
+!!! info "Looking for Tutorials?"
+    This is a reference page. For step-by-step guides, see:
+    - **[Quick Start](../configuration/quick-start.md)** - Your first configuration
+    - **[Concepts](../configuration/concepts.md)** - How it works
+    - **[Production Patterns](../configuration/production-patterns.md)** - Real-world examples
+
+## Function Signature
 
 ```python
 def database_config(
@@ -46,11 +52,20 @@ def database_config(
 
 A unique identifier for this database within your project.
 
+**Requirements:**
 - Must be unique across all entries in your config source
 - Used in CLI `--database` / `-d` flags to select this database
 - Becomes part of migration filename prefix (for versioned migrations)
 
-Examples: `"primary"`, `"analytics"`, `"legacy"`
+**Examples:**
+```python
+database_name="primary"
+database_name="analytics"
+database_name="legacy"
+```
+
+!!! tip "Naming Convention"
+    Use descriptive names that reflect the database's purpose: `primary`, `analytics`, `audit_logs`, etc.
 
 ### `database_type`
 
@@ -95,6 +110,16 @@ When `True`, this database is selected when `--database` / `-d` is not specified
 
 **Rule:** Exactly one entry must have `default=True`.
 
+**Example:**
+```python
+# Primary is default
+database_config(database_name="primary", default=True, ...)
+database_config(database_name="analytics", ...)  # default=False implied
+```
+
+!!! warning "Required Rule"
+    Exactly one database must have `default=True`. Having zero or multiple defaults will cause a validation error.
+
 ### `migrations_dir`
 
 Path where this database's migration files are stored.
@@ -108,26 +133,68 @@ Path where this database's migration files are stored.
 
 A list of Python import paths where DBWarden should discover SQLAlchemy model definitions.
 
-**When required:** When more than one database is configured, each entry needs explicit `model_paths` to keep model discovery boundaries clear.
+**When required:**
+- **Single database:** Optional (DBWarden scans entire codebase)
+- **Multiple databases:** Required for each database
 
 **How it works:** DBWarden imports each path and inspects classes inheriting from `DeclarativeBase` or `declarative_base()`.
+
+**Examples:**
+```python
+# Single module
+model_paths=["app.models"]
+
+# Multiple modules
+model_paths=["app.models.primary", "app.legacy"]
+
+# Nested modules
+model_paths=["app.models.api.v1", "app.models.api.v2"]
+```
+
+!!! tip "Performance"
+    Specifying `model_paths` makes discovery faster and more predictable, even for single-database projects.
+
+!!! info "Multi-Database"
+    See **[Multi-Database Guide](../configuration/multi-database.md)** for organizing models across databases.
 
 ### `dev_database_type` and `dev_database_url`
 
 These define an alternate connection for local development workflows.
 
 When `--dev` is passed to any DBWarden command:
-
 - `database_type` is swapped to `dev_database_type`
 - `database_url` is swapped to `dev_database_url`
 
-This lets you:
+**Benefits:**
+- ✅ Use SQLite locally for speed (if production is PostgreSQL)
+- ✅ Target a separate development database instance
+- ✅ Test migrations safely before running against production
+- ✅ Each developer has isolated database
+- ✅ Easy to reset (just delete the file)
 
-- Use SQLite locally for speed (if production is PostgreSQL)
-- Target a separate development database instance
-- Test migrations safely before running against production-like databases
+**Example:**
+```python
+database_config(
+    database_name="primary",
+    default=True,
+    database_type="postgresql",
+    database_url="postgresql://prod-host/myapp",
+    dev_database_type="sqlite",
+    dev_database_url="sqlite:///./dev.db",
+)
+```
 
-**Recommendation:** Use SQLite with `dev_database_url = "sqlite:///./development.db"` for the fastest local iteration loop.
+Use with:
+```bash
+dbwarden --dev migrate  # Uses SQLite
+dbwarden migrate        # Uses PostgreSQL
+```
+
+!!! tip "Recommended Pattern"
+    Use SQLite with `dev_database_url="sqlite:///./dev.db"` for the fastest local iteration loop.
+
+!!! info "Dev Mode Guide"
+    See **[Dev Mode](../configuration/dev-mode.md)** for complete workflow and patterns.
 
 ### `overlap_models`
 
@@ -142,13 +209,12 @@ Set `overlap_models=True` when:
 
 When enabled, CLI display commands show the original variable/expression for non-literal arguments instead of resolved values.
 
-Use this when:
-
+**Use when:**
 - Your config uses environment variables or expressions for secrets
 - You want terminal output to avoid exposing credentials
+- Running commands in CI/CD with logged output
 
-Example:
-
+**Example:**
 ```python
 import os
 
@@ -159,11 +225,24 @@ database_config(
     default=True,
     database_type="postgresql",
     database_url=DATABASE_URL,
-    secure_values=True,
+    secure_values=True,  # ← Enable secure display
 )
 ```
 
-With `secure_values=True`, `dbwarden settings show` will display `DATABASE_URL` instead of the resolved connection string.
+**Without `secure_values`:**
+```bash
+$ dbwarden database
+URL: postgresql://user:SECRET_PASSWORD@prod-host/myapp
+```
+
+**With `secure_values=True`:**
+```bash
+$ dbwarden database
+URL: DATABASE_URL (expression)
+```
+
+!!! warning "Production Requirement"
+    Always set `secure_values=True` in production to prevent credential exposure in logs.
 
 ## Configuration rules (enforced at load time)
 
@@ -244,6 +323,37 @@ database_config(
     model_paths=["app/models/analytics"],
 )
 ```
+
+## Quick Reference
+
+| Parameter | Required? | Default | Use When |
+|-----------|-----------|---------|----------|
+| `database_name` | ✅ Yes | - | Always |
+| `database_type` | ✅ Yes | - | Always |
+| `database_url` | ✅ Yes | - | Always |
+| `default` | ❌ No | `False` | Mark one database as default |
+| `migrations_dir` | ❌ No | `migrations/<name>` | Custom migration directory |
+| `model_paths` | ⚠️ Conditional | `None` | Multi-database or explicit discovery |
+| `dev_database_type` | ❌ No | `None` | Local development |
+| `dev_database_url` | ❌ No | `None` | Local development |
+| `overlap_models` | ❌ No | `False` | Shared models (read replicas) |
+| `secure_values` | ❌ No | `False` | Hide credentials in output |
+
+## Related Documentation
+
+**Getting Started:**
+- **[Quick Start](../configuration/quick-start.md)** - Your first configuration
+- **[Concepts](../configuration/concepts.md)** - How configuration works
+
+**Guides:**
+- **[Connection URLs](../configuration/connection-urls.md)** - Database URL formats
+- **[Model Discovery](../configuration/model-discovery.md)** - How `model_paths` works
+- **[Dev Mode](../configuration/dev-mode.md)** - Local development
+- **[Multi-Database](../configuration/multi-database.md)** - Multiple databases
+- **[Production Patterns](../configuration/production-patterns.md)** - Real-world examples
+
+**Help:**
+- **[Troubleshooting](../configuration/troubleshooting.md)** - Common issues
 
 ## Navigation
 

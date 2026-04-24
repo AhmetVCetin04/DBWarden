@@ -1,4 +1,26 @@
-# Full Example
+# Complete Application Example
+
+!!! note "Page Moved and Expanded"
+    This page has been moved and significantly enhanced with more examples.
+
+## 📍 New Location
+
+**[→ Complete Application Tutorial](tutorial/complete-application.md)**
+
+The new page includes:
+- Full project structure
+- Complete CRUD operations
+- Pydantic schemas
+- Error handling patterns
+- Testing examples
+- Docker and Kubernetes deployment
+- CI/CD pipeline example
+
+---
+
+For quick reference:
+
+## Quick Reference
 
 This is a complete FastAPI app integrating all DBWarden FastAPI helpers.
 

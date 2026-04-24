@@ -1,5 +1,25 @@
 # `migration_context`
 
+!!! note "Page Moved and Expanded"
+    This page has been moved to a comprehensive tutorial with detailed examples.
+
+## 📍 New Location
+
+**[→ Startup Checks Tutorial](tutorial/startup-checks.md)**
+
+The new page includes:
+- All parameters documented with examples
+- Check vs Migrate mode comparison
+- Environment-specific patterns
+- Production best practices
+- Complete troubleshooting guide
+
+---
+
+For quick reference:
+
+## Quick Reference
+
 `migration_context` is a FastAPI lifespan helper for startup migration or read-only schema checks.
 
 Related direct helpers:
