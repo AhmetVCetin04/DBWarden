@@ -1,8 +1,6 @@
 # CLI Reference
 
-This page is a command and flag lookup.
-
-For guided usage, start with the Tutorial pages.
+Pure command lookup for DBWarden CLI.
 
 ## Syntax
 
@@ -13,54 +11,44 @@ dbwarden [GLOBAL_OPTIONS] COMMAND [ARGS] [COMMAND_OPTIONS]
 ## Global options
 
 | Option | Description |
-|--------|-------------|
-| `--dev` | Use `dev_database_url`/`dev_database_type` for selected database |
-| `--strict-translation` | Fail on unsupported/lossy SQL translation in dev SQLite workflows |
+|---|---|
+| `--dev` | Use `dev_database_url` and `dev_database_type` for selected database |
+| `--strict-translation` | Fail on unsupported/lossy dev SQLite translation |
 | `--help` | Show help |
 
-## Configuration and setup
+## Setup and configuration
 
 ### `init`
-
-Initialize DBWarden in current project.
 
 ```bash
 dbwarden init
 dbwarden init --database primary
 ```
 
-Creates migrations directories and config scaffold if missing.
-
 ### `settings show`
-
-Show resolved settings.
 
 ```bash
 dbwarden settings show
-dbwarden settings show --database primary
+dbwarden settings show primary
 dbwarden settings show --all
 ```
 
 ### `settings default-database`
 
-Set default database entry.
-
 ```bash
 dbwarden settings default-database primary
 ```
 
-### `settings database add`
-
-Add database entry to config source.
+### `settings database-add`
 
 ```bash
-dbwarden settings database add analytics \
+dbwarden settings database-add analytics \
   --type clickhouse \
-  --url clickhouse://user:pass@localhost:8123/analytics \
+  --url "http://user:pass@localhost:8123/analytics" \
   --model-path app/models/analytics
 ```
 
-Common options:
+Options:
 
 - `--type`
 - `--url`
@@ -71,77 +59,61 @@ Common options:
 - `--overlap-models`
 - `--default`
 
-### `settings database remove`
+### `settings database-remove`
 
 ```bash
-dbwarden settings database remove analytics
+dbwarden settings database-remove analytics
 ```
 
-### `settings database rename`
+### `settings database-rename`
 
 ```bash
-dbwarden settings database rename primary main
+dbwarden settings database-rename primary main
 ```
 
-### `settings database set-dev`
+### `settings database-set-dev`
 
 ```bash
-dbwarden settings database set-dev primary \
-  --dev-type sqlite \
-  --dev-url sqlite:///./development.db
+dbwarden settings database-set-dev primary --type sqlite --url "sqlite:///./development.db"
 ```
 
-### `settings database clear-dev`
+### `settings database-clear-dev`
 
 ```bash
-dbwarden settings database clear-dev primary
+dbwarden settings database-clear-dev primary
 ```
 
 ## Migration authoring
 
 ### `make-migrations`
 
-Generate migration SQL from models.
-
 ```bash
-dbwarden make-migrations -d "add billing table" --database primary
-dbwarden --dev make-migrations -d "sync dev" --database primary
+dbwarden make-migrations "create users table" --database primary
+dbwarden make-migrations --verbose --database primary
 ```
 
-Options:
-
-- `-d, --description` text description
-- `--database` target database name
-- `-v, --verbose`
+Options: `--database`, `--verbose`
 
 ### `new`
 
-Create manual migration file.
-
 ```bash
-dbwarden new -d "manual hotfix" --database primary
-dbwarden new -d "backfill" --database primary --version 0042
+dbwarden new "manual hotfix" --database primary
+dbwarden new "backfill" --database primary --version 0042
 ```
 
-Options:
-
-- `-d, --description`
-- `--version`
-- `--database`
+Options: `--database`, `--version`
 
 ### `squash`
-
-Combine migration files when workflow permits.
 
 ```bash
 dbwarden squash --database primary
 ```
 
+Options: `--database`, `--verbose`
+
 ## Migration execution
 
 ### `migrate`
-
-Apply pending migrations.
 
 ```bash
 dbwarden migrate --database primary
@@ -154,18 +126,13 @@ dbwarden migrate --database primary --baseline --to-version 0005
 
 Options:
 
-- `--database`
-- `--all`
-- `--to-version`
-- `--count`
+- `--database`, `--all`
+- `--to-version`, `--count`
 - `--baseline`
-- `--with-backup`
-- `--backup-dir`
-- `-v, --verbose`
+- `--with-backup`, `--backup-dir`
+- `--verbose`
 
 ### `rollback`
-
-Rollback applied migrations.
 
 ```bash
 dbwarden rollback --database primary
@@ -173,12 +140,7 @@ dbwarden rollback --database primary --count 2
 dbwarden rollback --database primary --to-version 0007
 ```
 
-Options:
-
-- `--database`
-- `--count`
-- `--to-version`
-- `-v, --verbose`
+Options: `--database`, `--count`, `--to-version`, `--verbose`
 
 ## Inspection and diagnostics
 
@@ -197,27 +159,22 @@ dbwarden history --database primary
 
 ### `check-db`
 
-Inspect live schema.
-
 ```bash
 dbwarden check-db --database primary
-dbwarden check-db --database primary --output json
+dbwarden check-db --database primary --out json
 ```
 
-Options:
-
-- `--database`
-- `--output` (`txt`, `json`, `yaml`)
+Output formats: `txt`, `json`, `yaml`
 
 ### `diff`
 
-Schema comparison helper.
-
 ```bash
-dbwarden diff --database primary
+dbwarden diff all --database primary
+dbwarden diff models --database primary
+dbwarden diff migrations --database primary
 ```
 
-## Lock operations
+## Locking
 
 ### `lock-status`
 
@@ -231,11 +188,9 @@ dbwarden lock-status --database primary
 dbwarden unlock --database primary
 ```
 
-## Utility commands
+## Utility
 
 ### `config`
-
-Show active resolved configuration.
 
 ```bash
 dbwarden config
@@ -247,30 +202,19 @@ dbwarden config
 dbwarden version
 ```
 
-## Common command patterns
+## Legacy compatibility commands
 
-### Local dev loop
+The `database` command group remains as a compatibility alias to `settings` flows.
 
-```bash
-dbwarden --dev make-migrations -d "sync" --database primary
-dbwarden --dev migrate --database primary
-dbwarden --dev status --database primary
-```
-
-### Release loop
+Examples:
 
 ```bash
-dbwarden status --database primary
-dbwarden migrate --database primary --with-backup
-dbwarden history --database primary
+dbwarden database list
+dbwarden database add analytics --type sqlite --url "sqlite:///./analytics.db"
+dbwarden database remove analytics
 ```
 
-### Multi-database release
-
-```bash
-dbwarden migrate --all --with-backup
-dbwarden status --all
-```
+Prefer `settings` commands for new workflows.
 
 ## Navigation
 

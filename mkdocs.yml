@@ -22,7 +22,7 @@ nav:
       - Introduction: getting-started/introduction.md
       - Installation: installation.md
       - First Steps: getting-started/first-steps.md
-  - Tutorial:
+  - Tutorial - User Guide:
       - Configuration: configuration.md
       - Your First Migration: tutorial/your-first-migration.md
       - Applying Migrations: tutorial/applying-migrations.md

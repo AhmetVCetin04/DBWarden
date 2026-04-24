@@ -1,10 +1,14 @@
 # Multi-Database Setup
 
-DBWarden supports multiple databases in one config source.
+DBWarden supports multiple databases from one config source.
 
-This is useful when one service owns operational and analytics stores, or when bounded contexts are split by database.
+## What you'll learn
 
-## Example
+- how to register more than one database
+- required rules for model paths and defaults
+- command patterns for one database vs all databases
+
+## Example configuration
 
 ```python
 from dbwarden import database_config
@@ -21,39 +25,31 @@ database_config(
 database_config(
     database_name="analytics",
     database_type="clickhouse",
-    database_url="clickhouse://user:pass@localhost:8123/analytics",
+    database_url="http://user:pass@localhost:8123/analytics",
     model_paths=["app/models/analytics"],
 )
 ```
 
-## Rules to remember
+## Rules
 
-- Exactly one entry must be `default=True`
-- `model_paths` is required when more than one database is configured
-- URL/target collisions are rejected
+- exactly one entry must set `default=True`
+- if more than one database exists, each must define `model_paths`
+- URL/physical target collisions are rejected
 - `migrations_dir` defaults to `migrations/<database_name>`
 
-## Why model paths are required in multi-db mode
-
-Without explicit model boundaries, DBWarden cannot safely infer which tables belong to which database.
-
-Use dedicated model path groups per database:
-
-- API models -> `app/models/api`
-- Analytics models -> `app/models/analytics`
-
-If overlap is intentional, set `overlap_models=True` explicitly.
-
-## Running commands
+## Run it
 
 ```bash
 dbwarden migrate --database analytics
 dbwarden migrate --all
+dbwarden status --all
 ```
 
-## Operational recommendation
+## Operational guidance
 
-In CI/CD, run migrations for each database explicitly in a known order unless independent ordering is guaranteed.
+- run per-database migrations in explicit order if dependencies exist
+- keep model boundaries clear per database
+- use `overlap_models=True` only when overlap is intentional
 
 ## Navigation
 

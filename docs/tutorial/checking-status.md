@@ -1,52 +1,37 @@
 # Checking Status
 
-Use status and history commands to understand migration state.
+Use `status`, `history`, and `check-db` to understand migration state before and after changes.
 
-These commands should be part of your normal development and deployment flow.
+## What you'll learn
 
-## Status
+- when to run status commands
+- how to read applied vs pending signals
+- how to inspect live schema quickly
+
+## Prerequisites
+
+- project initialized with DBWarden
+- at least one configured database
+
+## Run it
 
 ```bash
 dbwarden status --database primary
 dbwarden history --database primary
+dbwarden check-db --database primary
 ```
 
-Reference: [CLI Reference](../cli-reference.md)
-
-## Navigation
-
-- Previous: [Rolling Back](rolling-back.md)
-- Next: [Dev Mode](dev-mode.md)
-
-Shows applied and pending versions.
-
-Use this before migrate (to understand plan) and after migrate (to confirm result).
-
-## History
-
-```bash
-dbwarden history --database primary
-```
-
-Shows execution records with order and timestamps.
-
-Use history for audit and incident analysis.
-
-## Multi-database status checks
+For multi-database projects:
 
 ```bash
 dbwarden status --all
 ```
 
-This is useful in systems where one release touches several stores.
+## What happened
 
-## Inspect schema
-
-```bash
-dbwarden check-db --database primary
-```
-
-Use this to compare expected schema and live database state.
+- `status` reports applied and pending migration counts
+- `history` reports execution records and order
+- `check-db` reports current database schema details
 
 ## Recommended operational loop
 
@@ -56,3 +41,16 @@ dbwarden migrate --database primary
 dbwarden status --database primary
 dbwarden history --database primary
 ```
+
+## Common failure modes
+
+- database name typo in `--database`
+- migration files missing from expected migrations directory
+- lock conflicts from concurrent migration runners
+
+Reference: [CLI Reference](../cli-reference.md)
+
+## Navigation
+
+- Previous: [Rolling Back](rolling-back.md)
+- Next: [Dev Mode](dev-mode.md)
