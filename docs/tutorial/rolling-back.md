@@ -1,43 +1,40 @@
 # Rolling Back
 
-Rollback uses the `--rollback` SQL section from migration files.
+Rollback executes the `-- rollback` section of applied migration files.
 
-Rollback is a first-class operation in DBWarden, not an afterthought.
+## What you'll learn
 
-## Roll back latest migration
+- how rollback selection works
+- when to use `--count` vs `--to-version`
+- how to recover safely when rollback fails
+
+## Prerequisites
+
+- applied migration history exists
+- rollback SQL is defined in target migration files
+
+## Run it
 
 ```bash
 dbwarden rollback --database primary
-```
-
-This defaults to one migration when `--count` and `--to-version` are omitted.
-
-## Roll back multiple migrations
-
-```bash
 dbwarden rollback --database primary --count 2
-```
-
-## Roll back to a target version
-
-```bash
 dbwarden rollback --database primary --to-version 0007
 ```
 
-Use `--to-version` when recovering to a known good checkpoint.
+## What happened
 
-## How rollback is selected
+- DBWarden loads applied migration history
+- selects rollback candidates
+- executes rollback SQL in reverse order
+- updates migration metadata records
 
-DBWarden reads applied migration history, identifies rollback candidates, and executes rollback statements in reverse order.
+## Common failure modes
 
-## Best practices
+- rollback SQL doesn't match current schema state
+- data rollback assumptions are invalid
+- lock conflicts from concurrent migration process
 
-- keep rollback SQL simple and deterministic
-- avoid relying on unknown runtime state
-- validate rollback path in pre-release testing
-- prefer forward-fix migration when rollback would be riskier than correction
-
-If rollback fails, inspect migration history and create a corrective forward migration.
+When rollback is risky, prefer a forward-fix migration.
 
 Reference: [Safe Deployment](../advanced/safe-deployment.md)
 

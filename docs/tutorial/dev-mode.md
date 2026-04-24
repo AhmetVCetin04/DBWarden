@@ -1,19 +1,19 @@
 # Dev Mode
 
-Dev mode lets you run migration workflows against `dev_database_url` instead of the primary URL.
+Dev mode runs commands against `dev_database_url`/`dev_database_type` instead of production-targeted values.
 
-This gives fast local feedback while keeping production-targeted config in the same source.
+## What you'll learn
 
-## Run commands in dev mode
+- how `--dev` swaps active database settings
+- how to configure dev database fields
+- when to use `--strict-translation`
 
-```bash
-dbwarden --dev migrate --database primary
-dbwarden --dev make-migrations -d "sync models" --database primary
-```
+## Prerequisites
 
-When `--dev` is enabled, DBWarden swaps active connection values to `dev_database_url` and `dev_database_type` for the selected database.
+- database entry includes `dev_database_url`
+- optionally `dev_database_type`
 
-## Configure dev database
+## Configure it
 
 ```python
 from dbwarden import database_config
@@ -29,21 +29,24 @@ database_config(
 )
 ```
 
-If `--dev` is used without `dev_database_url`, DBWarden fails fast.
-
-## Strict translation mode
+## Run it
 
 ```bash
-dbwarden --dev --strict-translation make-migrations -d "validate" --database primary
+dbwarden --dev make-migrations "sync models" --database primary
+dbwarden --dev migrate --database primary
 ```
 
-Use strict mode in CI or release-prep checks to catch lossy translation early.
+Strict translation mode:
 
-## Typical team pattern
+```bash
+dbwarden --dev --strict-translation make-migrations "validate" --database primary
+```
 
-1. local iterations with `--dev` (SQLite)
-2. pre-merge validation on production-like database
-3. deploy with standard `migrate --database <name>`
+## Common failure modes
+
+- `--dev` without `dev_database_url`
+- relying on backend-specific SQL features unavailable in SQLite
+- ignoring strict translation errors in CI workflows
 
 Reference: [SQL Translation](../sql-translation.md)
 
