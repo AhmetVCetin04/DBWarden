@@ -116,6 +116,15 @@ def make_migrations_cmd(
 
     filepath = os.path.join(migrations_dir, filename)
 
+    # Validate the final path stays within migrations directory
+    migrations_dir_canonical = os.path.realpath(migrations_dir)
+    filepath_canonical = os.path.realpath(filepath)
+    if not filepath_canonical.startswith(migrations_dir_canonical + os.sep):
+        raise ValueError(
+            f"Invalid migration path: {filename} resolves outside migrations directory. "
+            "Path traversal not allowed."
+        )
+
     content = f"""-- upgrade
 
 {upgrade_sql}
@@ -242,6 +251,15 @@ def new_migration_cmd(
     safe_description = re.sub(r"[^a-zA-Z0-9]", "_", description).lower()
     filename = generate_migration_filename(db_name, safe_description, version)
     filepath = os.path.join(migrations_dir, filename)
+
+    # Validate the final path stays within migrations directory
+    migrations_dir_canonical = os.path.realpath(migrations_dir)
+    filepath_canonical = os.path.realpath(filepath)
+    if not filepath_canonical.startswith(migrations_dir_canonical + os.sep):
+        raise ValueError(
+            f"Invalid migration path: {filename} resolves outside migrations directory. "
+            "Path traversal not allowed."
+        )
 
     content = f"""-- upgrade
 
