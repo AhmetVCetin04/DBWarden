@@ -2,7 +2,7 @@
   <img src="https://raw.githubusercontent.com/emiliano-gandini-outeda/DBWarden/refs/heads/main/assets/icon.png" alt="DBWarden" width="128"/>
 </p>
 <p align="center">
-    <em>The database toolkit for FastAPI. Lightweight, explicit, and built to stay out of your way.</em>
+    <em>Everything you loved about Django migrations, in FastAPI.</em>
 </p>
 <p align="center">
   <a href="https://pypi.org/project/dbwarden"><img src="https://img.shields.io/pypi/v/dbwarden?color=%2334D058&label=pypi" alt="PyPI version"/></a>
@@ -12,7 +12,7 @@
 
 ---
 
-**Documentation**: [https://dbwarden.readthedocs.io](https://dbwarden.readthedocs.io)
+**Documentation**: [DBWarden](https://emiliano-gandini-outeda.github.io/DBWarden)
 
 **Source Code**: [https://github.com/emiliano-gandini-outeda/DBWarden](https://github.com/emiliano-gandini-outeda/DBWarden)
 
@@ -20,7 +20,7 @@
 
 DBWarden is a database toolkit for FastAPI and SQLAlchemy projects.
 It handles migrations, async sessions, startup validation, and health
-checks — all from a single configuration source.
+checks: all from a single configuration source.
 
 > **Experimental**: DBWarden is under active development.
 > Breaking changes may occur between versions.
