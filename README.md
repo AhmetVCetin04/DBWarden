@@ -42,7 +42,7 @@ checks: all from a single configuration source.
   single project, with full isolation and uniqueness guarantees.
 - **Safe by default**: Migration locking, checksum integrity, collision
   detection, and schema drift checks before you deploy. DBWarden protects
-  your database — from accidents and from itself.
+  your database, from accidents and from itself.
 
 ## Requirements
 
@@ -162,7 +162,7 @@ async def list_users(session: SessionDep):
     return result.scalars().all()
 ```
 
-One config source. Sessions, health checks, and startup validation — handled.
+One config source. Sessions, health checks, and startup validation, all handled.
 
 ---
 
