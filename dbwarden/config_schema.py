@@ -77,7 +77,14 @@ def _validate_migration_table(_self, _attribute, value: str | None) -> None:
 class DatabaseEntry:
     database_name: str = field(validator=_validate_database_name)
     database_type: DatabaseType = field(validator=_validate_database_type)
-    database_url: str = field(validator=validators.min_len(1))
+    database_url_sync: str | None = None
+    database_url_async: str | None = None
+
+    def __attrs_post_init__(self) -> None:
+        if not self.database_url_sync and not self.database_url_async:
+            raise ValueError(
+                "At least one of database_url_sync or database_url_async must be provided."
+            )
     secure_values: bool = False
     default: bool = False
     migrations_dir: str | None = None
@@ -98,6 +105,12 @@ _CONVERTER = cattrs.Converter(detailed_validation=True)
 
 
 def structure_database_entry(kwargs: dict) -> DatabaseEntry:
+    sync = kwargs.get("database_url_sync")
+    async_ = kwargs.get("database_url_async")
+    if not sync and not async_:
+        raise ConfigurationError(
+            "At least one of database_url_sync or database_url_async must be provided."
+        )
     try:
         return _CONVERTER.structure(kwargs, DatabaseEntry)
     except Exception as exc:

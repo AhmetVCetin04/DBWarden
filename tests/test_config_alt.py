@@ -32,7 +32,7 @@ class TestConfigAlt:
                 _write_settings(
                     Path("dbwarden.py"),
                     "from dbwarden import database_config\n\n"
-                    "database_config(database_name='primary', default=True, database_type='sqlite', database_url='sqlite:///./app.db')\n",
+                    "database_config(database_name='primary', default=True, database_type='sqlite', database_url_sync='sqlite:///./app.db')\n",
                 )
 
                 cfg = get_multi_db_config()
@@ -50,8 +50,8 @@ class TestConfigAlt:
                 _write_settings(
                     Path("dbwarden.py"),
                     "from dbwarden import database_config\n\n"
-                    "database_config(database_name='primary', default=True, database_type='sqlite', database_url='sqlite:///./app.db')\n"
-                    "database_config(database_name='analytics', database_type='sqlite', database_url='sqlite:///./analytics.db')\n",
+                    "database_config(database_name='primary', default=True, database_type='sqlite', database_url_sync='sqlite:///./app.db')\n"
+                    "database_config(database_name='analytics', database_type='sqlite', database_url_sync='sqlite:///./analytics.db')\n",
                 )
 
                 with pytest.raises(ConfigurationError, match="model_paths is required"):
@@ -67,8 +67,8 @@ class TestConfigAlt:
                 _write_settings(
                     Path("dbwarden.py"),
                     "from dbwarden import database_config\n\n"
-                    "database_config(database_name='primary', default=True, database_type='sqlite', database_url='sqlite:///./app.db', model_paths=['models/shared'])\n"
-                    "database_config(database_name='analytics', database_type='sqlite', database_url='sqlite:///./analytics.db', model_paths=['models/shared'])\n",
+                    "database_config(database_name='primary', default=True, database_type='sqlite', database_url_sync='sqlite:///./app.db', model_paths=['models/shared'])\n"
+                    "database_config(database_name='analytics', database_type='sqlite', database_url_sync='sqlite:///./analytics.db', model_paths=['models/shared'])\n",
                 )
 
                 with pytest.raises(ConfigurationError, match="model_paths overlap"):
@@ -84,7 +84,7 @@ class TestConfigAlt:
                 _write_settings(
                     Path("dbwarden.py"),
                     "from dbwarden import database_config\n\n"
-                    "database_config(database_name='primary', default=True, database_type='postgresql', database_url='postgresql://user:pass@localhost:5432/main', dev_database_type='sqlite', dev_database_url='sqlite:///./dev.db')\n",
+                    "database_config(database_name='primary', default=True, database_type='postgresql', database_url_sync='postgresql://user:pass@localhost:5432/main', dev_database_type='sqlite', dev_database_url='sqlite:///./dev.db')\n",
                 )
 
                 set_dev_mode(True)
@@ -115,12 +115,12 @@ class TestConfigAlt:
                     Path("dbwarden.py"),
                     "from dbwarden import database_config\n\n"
                     "DATABASE_URL = 'postgresql://user:pass@localhost/db'\n"
-                    "database_config(database_name='primary', default=True, database_type='postgresql', database_url=DATABASE_URL, secure_values=True)\n",
+                    "database_config(database_name='primary', default=True, database_type='postgresql', database_url_sync=DATABASE_URL, secure_values=True)\n",
                 )
 
                 cfg = get_multi_db_config()
                 assert cfg.databases["primary"].secure_values is True
-                assert cfg.databases["primary"].secure_display_values["database_url"] == "DATABASE_URL"
+                assert cfg.databases["primary"].secure_display_values["database_url_sync"] == "DATABASE_URL"
                 assert cfg.databases["primary"].sqlalchemy_url == "postgresql://user:pass@localhost/db"
             finally:
                 os.chdir(old_cwd)
