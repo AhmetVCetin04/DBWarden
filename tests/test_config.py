@@ -40,7 +40,7 @@ class TestConfig:
                     [
                         "from dbwarden import database_config",
                         "",
-                        "database_config(database_name='primary', default=True, database_type='sqlite', database_url='sqlite:///./test.db')",
+                        "database_config(database_name='primary', default=True, database_type='sqlite', database_url_sync='sqlite:///./test.db')",
                     ],
                 )
                 config = get_config()
@@ -61,7 +61,7 @@ class TestConfig:
                     [
                         "from dbwarden import database_config",
                         "",
-                        "database_config(database_name='primary', default=True, database_type='sqlite', database_url='sqlite:///./test.db', migration_table='custom_migrations')",
+                        "database_config(database_name='primary', default=True, database_type='sqlite', database_url_sync='sqlite:///./test.db', migration_table='custom_migrations')",
                     ],
                 )
                 config = get_config()
@@ -79,7 +79,7 @@ class TestConfig:
                     [
                         "from dbwarden import database_config",
                         "",
-                        "database_config(database_name='primary', default=True, database_type='sqlite', database_url='sqlite:///./test.db', model_paths=['./models/user.py'])",
+                        "database_config(database_name='primary', default=True, database_type='sqlite', database_url_sync='sqlite:///./test.db', model_paths=['./models/user.py'])",
                     ],
                 )
                 config = get_config()
@@ -87,7 +87,7 @@ class TestConfig:
             finally:
                 os.chdir(old)
 
-    def test_missing_required_field_raises_error(self):
+    def test_missing_urls_raises_error(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             old = os.getcwd()
             os.chdir(tmpdir)
@@ -97,10 +97,10 @@ class TestConfig:
                     [
                         "from dbwarden import database_config",
                         "",
-                        "database_config(database_name='primary', default=True, database_url='sqlite:///./test.db')",
+                        "database_config(database_name='primary', default=True, database_type='sqlite')",
                     ],
                 )
-                with pytest.raises(ConfigurationError, match="database_type"):
+                with pytest.raises(ConfigurationError, match="database_url_sync or database_url_async"):
                     get_config()
             finally:
                 os.chdir(old)
@@ -124,7 +124,7 @@ class TestConfig:
                     [
                         "from dbwarden import database_config",
                         "",
-                        "database_config(database_name='primary', default=False, database_type='sqlite', database_url='sqlite:///./test.db')",
+                        "database_config(database_name='primary', default=False, database_type='sqlite', database_url_sync='sqlite:///./test.db')",
                     ],
                 )
                 with pytest.raises(ConfigurationError, match="Exactly one default"):
@@ -142,8 +142,8 @@ class TestConfig:
                     [
                         "from dbwarden import database_config",
                         "",
-                        "database_config(database_name='primary', default=True, database_type='sqlite', database_url='sqlite:///./primary.db', model_paths=['models/primary'])",
-                        "database_config(database_name='analytics', database_type='sqlite', database_url='sqlite:///./analytics.db', model_paths=['models/analytics'])",
+                        "database_config(database_name='primary', default=True, database_type='sqlite', database_url_sync='sqlite:///./primary.db', model_paths=['models/primary'])",
+                        "database_config(database_name='analytics', database_type='sqlite', database_url_sync='sqlite:///./analytics.db', model_paths=['models/analytics'])",
                     ],
                 )
                 db = get_database("analytics")
@@ -161,7 +161,7 @@ class TestConfig:
                     [
                         "from dbwarden import database_config",
                         "",
-                        "database_config(database_name='primary', default=True, database_type='sqlite', database_url='sqlite:///./test.db')",
+                        "database_config(database_name='primary', default=True, database_type='sqlite', database_url_sync='sqlite:///./test.db')",
                     ],
                 )
                 with pytest.raises(ConfigurationError, match="not found in settings config"):
@@ -179,9 +179,9 @@ class TestConfig:
                     [
                         "from dbwarden import database_config",
                         "",
-                        "database_config(database_name='primary', default=True, database_type='sqlite', database_url='sqlite:///./primary.db', model_paths=['models/primary'])",
-                        "database_config(database_name='analytics', database_type='sqlite', database_url='sqlite:///./analytics.db', model_paths=['models/analytics'])",
-                        "database_config(database_name='legacy', database_type='sqlite', database_url='sqlite:///./legacy.db', model_paths=['models/legacy'])",
+                        "database_config(database_name='primary', default=True, database_type='sqlite', database_url_sync='sqlite:///./primary.db', model_paths=['models/primary'])",
+                        "database_config(database_name='analytics', database_type='sqlite', database_url_sync='sqlite:///./analytics.db', model_paths=['models/analytics'])",
+                        "database_config(database_name='legacy', database_type='sqlite', database_url_sync='sqlite:///./legacy.db', model_paths=['models/legacy'])",
                     ],
                 )
                 dbs = list_databases()
@@ -199,8 +199,8 @@ class TestConfig:
                     [
                         "from dbwarden import database_config",
                         "",
-                        "database_config(database_name='primary', default=True, database_type='sqlite', database_url='sqlite:///./primary.db', model_paths=['models/primary'])",
-                        "database_config(database_name='analytics', database_type='sqlite', database_url='sqlite:///./analytics.db', model_paths=['models/analytics'])",
+                        "database_config(database_name='primary', default=True, database_type='sqlite', database_url_sync='sqlite:///./primary.db', model_paths=['models/primary'])",
+                        "database_config(database_name='analytics', database_type='sqlite', database_url_sync='sqlite:///./analytics.db', model_paths=['models/analytics'])",
                     ],
                 )
                 config = get_multi_db_config()
@@ -220,7 +220,7 @@ class TestConfig:
                     [
                         "from dbwarden import database_config",
                         "",
-                        "database_config(database_name='primary', default=True, database_type='postgresql', database_url='postgresql://user:password@localhost:5432/main', dev_database_url='sqlite:///./development.db')",
+                        "database_config(database_name='primary', default=True, database_type='postgresql', database_url_sync='postgresql://user:password@localhost:5432/main', dev_database_url='sqlite:///./development.db')",
                     ],
                 )
                 set_dev_mode(True)
@@ -240,7 +240,7 @@ class TestConfig:
                     [
                         "from dbwarden import database_config",
                         "",
-                        "database_config(database_name='primary', default=True, database_type='sqlite', database_url='sqlite:///./primary.db')",
+                        "database_config(database_name='primary', default=True, database_type='sqlite', database_url_sync='sqlite:///./primary.db')",
                     ],
                 )
                 set_dev_mode(True)
@@ -259,7 +259,7 @@ class TestConfig:
                     [
                         "from dbwarden import database_config",
                         "",
-                        "database_config(database_name='primary', default=True, database_type='sqlite', database_url='sqlite:///./primary.db', dev_database_type='sqlite')",
+                        "database_config(database_name='primary', default=True, database_type='sqlite', database_url_sync='sqlite:///./primary.db', dev_database_type='sqlite')",
                     ],
                 )
                 with pytest.raises(ConfigurationError, match="dev_database_url is required"):
@@ -277,11 +277,11 @@ class TestConfig:
                     [
                         "from dbwarden import database_config",
                         "",
-                        "database_config(database_name='primary', default=True, database_type='sqlite', database_url='sqlite:///./same.db', model_paths=['models/primary'])",
-                        "database_config(database_name='analytics', database_type='sqlite', database_url='sqlite:///./same.db', model_paths=['models/analytics'])",
+                        "database_config(database_name='primary', default=True, database_type='sqlite', database_url_sync='sqlite:///./same.db', model_paths=['models/primary'])",
+                        "database_config(database_name='analytics', database_type='sqlite', database_url_sync='sqlite:///./same.db', model_paths=['models/analytics'])",
                     ],
                 )
-                with pytest.raises(ConfigurationError, match="Duplicate database_url"):
+                with pytest.raises(ConfigurationError, match="Duplicate database_url_sync"):
                     get_multi_db_config()
             finally:
                 os.chdir(old)
