@@ -1,10 +1,12 @@
 import os
 import re
+import json
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
 from dbwarden.config import get_database, get_multi_db_config
+from dbwarden.engine.checksum import calculate_checksum
 from dbwarden.engine.file_parser import parse_upgrade_statements
 from dbwarden.engine.model_discovery import (
     get_all_model_tables,
@@ -58,6 +60,7 @@ def make_migrations_cmd(
     description: str | None = None,
     verbose: bool = False,
     database: str | None = None,
+    output_plan: bool = False,
 ) -> None:
     """
     Auto-generate SQL migration from SQLAlchemy models.
@@ -66,6 +69,7 @@ def make_migrations_cmd(
         description: Description for the migration.
         verbose: Enable verbose logging.
         database: Target database name.
+        output_plan: Print the migration plan JSON without writing files.
     """
     logger = get_logger()
 
@@ -105,6 +109,18 @@ def make_migrations_cmd(
         tables, migrations_dir, database, db_name
     )
 
+    safe_desc = _resolve_migration_description(description, changes)
+    filename = generate_migration_filename(db_name, safe_desc, next_number)
+    plan = build_migration_plan(
+        migration_id=Path(filename).stem,
+        changes=changes,
+        upgrade_sql=upgrade_sql,
+    )
+
+    if output_plan:
+        console.print(json.dumps(plan, indent=2), markup=False, highlight=False)
+        return
+
     if not upgrade_sql.strip():
         console.print(
             "No new migrations to generate - all models already covered by existing migrations.",
@@ -112,15 +128,8 @@ def make_migrations_cmd(
         )
         return
 
-    if description is None and changes:
-        safe_desc = autogenerate_migration_name(changes)
-        if not safe_desc:
-            safe_desc = "auto_generated"
-    else:
-        safe_desc = re.sub(r"[^a-zA-Z0-9]", "_", description or "auto_generated").lower()
-
-    filename = generate_migration_filename(db_name, safe_desc, next_number)
     filepath = os.path.join(migrations_dir, filename)
+    plan_filepath = str(Path(filepath).with_suffix(".plan.json"))
 
     # Validate the final path stays within migrations directory
     migrations_dir_canonical = os.path.realpath(migrations_dir)
@@ -143,9 +152,52 @@ def make_migrations_cmd(
     with open(filepath, "w") as f:
         f.write(content)
 
+    with open(plan_filepath, "w", encoding="utf-8") as f:
+        json.dump(plan, f, indent=2)
+        f.write("\n")
+
     logger.info(f"Created migration file: {filename}")
     console.print(f"Created migration file: {filepath}", style="green")
+    console.print(f"Created migration plan: {plan_filepath}", style="green")
     console.print(f"Tables included: {', '.join(t.name for t in tables)}", style="cyan")
+
+
+def _resolve_migration_description(
+    description: str | None,
+    changes: list[Change],
+) -> str:
+    if description is None and changes:
+        safe_desc = autogenerate_migration_name(changes)
+        if not safe_desc:
+            safe_desc = "auto_generated"
+        return safe_desc
+    return re.sub(r"[^a-zA-Z0-9]", "_", description or "auto_generated").lower()
+
+
+def build_migration_plan(
+    migration_id: str,
+    changes: list[Change],
+    upgrade_sql: str,
+) -> dict[str, object]:
+    operations = [_build_plan_operation(change) for change in changes]
+    checksum = calculate_checksum([upgrade_sql]) if upgrade_sql.strip() else calculate_checksum([])
+    return {
+        "migration_id": migration_id,
+        "operations": operations,
+        "required_flags": [],
+        "checksum": checksum,
+    }
+
+
+def _build_plan_operation(change: Change) -> dict[str, str]:
+    operation = {
+        "type": change.operation,
+        "table": change.table,
+        "severity": "INFO",
+    }
+    if change.target:
+        operation["column"] = change.target
+    return operation
 
 
 def generate_migration_sql(

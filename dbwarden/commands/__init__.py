@@ -60,10 +60,18 @@ def handle_init(database: str | None = None) -> None:
 
 
 def handle_make_migrations(
-    description: str | None, verbose: bool, database: str | None = None
+    description: str | None,
+    verbose: bool,
+    database: str | None = None,
+    output_plan: bool = False,
 ) -> None:
     """Handle make-migrations command."""
-    make_migrations_cmd(description=description, verbose=verbose, database=database)
+    make_migrations_cmd(
+        description=description,
+        verbose=verbose,
+        database=database,
+        output_plan=output_plan,
+    )
 
 
 def handle_new(
