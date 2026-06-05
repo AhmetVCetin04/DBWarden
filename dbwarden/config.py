@@ -33,8 +33,9 @@ _IGNORE_DIRS = {
 
 @dataclass
 class DatabaseConfig:
-    sqlalchemy_url: str
     database_type: DatabaseType
+    sqlalchemy_url_sync: str | None = None
+    sqlalchemy_url_async: str | None = None
     secure_values: bool = False
     secure_display_values: dict[str, str] = field(default_factory=dict)
     model_paths: list[str] | None = None
@@ -44,6 +45,15 @@ class DatabaseConfig:
     dev_database_url: str | None = None
     dev_database_type: DatabaseType | None = None
     overlap_models: bool = False
+
+    @property
+    def sqlalchemy_url(self) -> str:
+        """Backward-compat: sync URL (used by migration engine)."""
+        if self.sqlalchemy_url_sync is not None:
+            return self.sqlalchemy_url_sync
+        if self.sqlalchemy_url_async:
+            return self.sqlalchemy_url_async
+        return ""
 
 
 @dataclass
@@ -352,24 +362,43 @@ def _finalize_entries(
             )
         migration_owners[migrations_dir] = entry.database_name
 
-        normalized_url = _normalized_url(entry.database_url)
-        if normalized_url in url_owners:
-            raise ConfigurationError(
-                f"Duplicate database_url: '{entry.database_url}'"
-            )
-        url_owners[normalized_url] = entry.database_name
+        if entry.database_url_sync:
+            normalized_url = _normalized_url(entry.database_url_sync)
+            if normalized_url in url_owners:
+                raise ConfigurationError(
+                    f"Duplicate database_url_sync: '{entry.database_url_sync}'"
+                )
+            url_owners[normalized_url] = entry.database_name
 
-        target_key = _build_database_target_key(
-            entry.database_url,
-            entry.database_type,
-            base_dir,
-        )
-        if target_key in target_owners:
-            raise ConfigurationError(
-                "Duplicate database target detected: "
-                f"'{entry.database_name}' collides with '{target_owners[target_key]}'"
+            target_key = _build_database_target_key(
+                entry.database_url_sync,
+                entry.database_type,
+                base_dir,
             )
-        target_owners[target_key] = entry.database_name
+            if target_key in target_owners:
+                raise ConfigurationError(
+                    "Duplicate database target detected: "
+                    f"'{entry.database_name}' collides with '{target_owners[target_key]}'"
+                )
+            target_owners[target_key] = entry.database_name
+
+        if entry.database_url_async:
+            async_target_key = _build_database_target_key(
+                entry.database_url_async,
+                entry.database_type,
+                base_dir,
+            )
+            if async_target_key in target_owners:
+                raise ConfigurationError(
+                    "Duplicate database target detected for async URL: "
+                    f"'{entry.database_name}' collides with '{target_owners[async_target_key]}'"
+                )
+            target_owners[async_target_key] = entry.database_name
+
+        if not entry.database_url_sync and not entry.database_url_async:
+            raise ConfigurationError(
+                f"At least one of database_url_sync or database_url_async must be provided for '{entry.database_name}'."
+            )
 
         if entry.dev_database_type and not entry.dev_database_url:
             raise ConfigurationError(
@@ -406,7 +435,8 @@ def _finalize_entries(
                 secure_display_values = variable_value_expressions[index]
 
         databases[entry.database_name] = DatabaseConfig(
-            sqlalchemy_url=entry.database_url,
+            sqlalchemy_url_sync=entry.database_url_sync,
+            sqlalchemy_url_async=entry.database_url_async,
             database_type=entry.database_type,
             secure_values=entry.secure_values,
             secure_display_values=secure_display_values,
@@ -484,7 +514,7 @@ def get_database(name: str | None = None) -> DatabaseConfig:
 
     return replace(
         selected,
-        sqlalchemy_url=selected.dev_database_url,
+        sqlalchemy_url_sync=selected.dev_database_url,
         database_type=dev_database_type,
     )
 
