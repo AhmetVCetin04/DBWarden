@@ -209,13 +209,23 @@ def make_migrations(
     verbose: bool = typer.Option(
         False, "--verbose", "-v", help="Enable verbose logging"
     ),
+    plan: bool = typer.Option(
+        False,
+        "--plan",
+        help="Output migration plan JSON without writing files",
+    ),
     database: str | None = typer.Option(
         None, "--database", "-d", help="Target database name"
     ),
 ):
     """Auto-generate SQL migration from SQLAlchemy models."""
     validate_directory()
-    handle_make_migrations(description=description, verbose=verbose, database=database)
+    handle_make_migrations(
+        description=description,
+        verbose=verbose,
+        database=database,
+        output_plan=plan,
+    )
 
 
 @app.command()
