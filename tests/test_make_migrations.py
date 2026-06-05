@@ -1,8 +1,11 @@
 import os
 import tempfile
+import json
+from pathlib import Path
 
-from dbwarden.commands.make_migrations import generate_migration_sql
+from dbwarden.commands.make_migrations import build_migration_plan, generate_migration_sql, make_migrations_cmd
 from dbwarden.engine.model_discovery import ModelColumn, ModelTable
+from dbwarden.engine.migration_name import Change
 
 
 def _write_migration(directory: str, name: str, content: str) -> None:
@@ -78,3 +81,64 @@ DROP TABLE users
         assert "ALTER TABLE users ADD COLUMN email" in upgrade_sql
         assert "CREATE TABLE IF NOT EXISTS users" not in upgrade_sql
         assert "ALTER TABLE users DROP COLUMN email" in rollback_sql
+
+
+def test_build_migration_plan_includes_operations_and_checksum():
+    plan = build_migration_plan(
+        migration_id="primary__0001_add_users_age",
+        changes=[Change(operation="add_column", table="users", target="age")],
+        upgrade_sql="ALTER TABLE users ADD COLUMN age INTEGER",
+    )
+
+    assert plan["migration_id"] == "primary__0001_add_users_age"
+    assert plan["required_flags"] == []
+    assert plan["operations"] == [
+        {
+            "type": "add_column",
+            "table": "users",
+            "column": "age",
+            "severity": "INFO",
+        }
+    ]
+    assert isinstance(plan["checksum"], str)
+    assert plan["checksum"]
+
+
+def test_make_migrations_writes_plan_file_next_to_sql():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        old_cwd = os.getcwd()
+        os.chdir(tmpdir)
+        try:
+            Path("dbwarden.py").write_text(
+                "from dbwarden import database_config\n\n"
+                "database_config(database_name='primary', default=True, database_type='sqlite', database_url='sqlite:///./app.db', model_paths=['models'])\n",
+                encoding="utf-8",
+            )
+            Path("migrations/primary").mkdir(parents=True)
+            Path("models").mkdir(parents=True)
+            Path("models/user.py").write_text(
+                "from sqlalchemy import Column, Integer, String\n"
+                "from sqlalchemy.orm import declarative_base\n\n"
+                "Base = declarative_base()\n\n"
+                "class User(Base):\n"
+                "    __tablename__ = 'users'\n"
+                "    id = Column(Integer, primary_key=True)\n"
+                "    email = Column(String(255), nullable=False, unique=True)\n",
+                encoding="utf-8",
+            )
+
+            make_migrations_cmd(database="primary")
+
+            sql_files = sorted(Path("migrations/primary").glob("*.sql"))
+            plan_files = sorted(Path("migrations/primary").glob("*.plan.json"))
+
+            assert len(sql_files) == 1
+            assert len(plan_files) == 1
+            assert plan_files[0].name == sql_files[0].with_suffix(".plan.json").name
+
+            plan = json.loads(plan_files[0].read_text(encoding="utf-8"))
+            assert plan["migration_id"] == sql_files[0].stem
+            assert plan["operations"]
+            assert plan["checksum"]
+        finally:
+            os.chdir(old_cwd)
