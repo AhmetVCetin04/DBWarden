@@ -155,8 +155,23 @@ def _make_sync_clickhouse_dep(name: str, dev: bool = False):
     return _dependency
 
 
+def _dispose_one(factory: Any) -> None:
+    """Dispose the engine underlying a sessionmaker, if reachable."""
+    engine = getattr(factory, "bind", None)
+    if engine is None:
+        return
+    if hasattr(engine, "sync_engine"):
+        # async_sessionmaker → AsyncEngine → sync Engine
+        sync_engine = engine.sync_engine
+        if hasattr(sync_engine, "dispose"):
+            sync_engine.dispose()
+    elif hasattr(engine, "dispose"):
+        # sessionmaker → Engine
+        engine.dispose()
+
+
 def dispose_engines() -> None:
-    """Close all cached engines and clients.
+    """Dispose all cached engine pools and clear all session/client caches.
 
     Call during FastAPI shutdown:
 
@@ -164,8 +179,20 @@ def dispose_engines() -> None:
         async def lifespan(app: FastAPI):
             yield
             dispose_engines()
+
+    This disposes every cached SQLAlchemy engine (async and sync), clears
+    session factory caches, and drops ClickHouse client references so the
+    garbage collector can close them.
+
+    Call exactly once during application shutdown. After disposal, the
+    next ``_async_session_factory()`` or ``_sync_session_factory()`` call
+    will create fresh engines automatically.
     """
-    _CLICKHOUSE_ASYNC_CLIENTS.clear()
-    _CLICKHOUSE_SYNC_CLIENTS.clear()
+    for factory in _ASYNC_SESSION_FACTORIES.values():
+        _dispose_one(factory)
+    for factory in _SYNC_SESSION_FACTORIES.values():
+        _dispose_one(factory)
     _ASYNC_SESSION_FACTORIES.clear()
     _SYNC_SESSION_FACTORIES.clear()
+    _CLICKHOUSE_ASYNC_CLIENTS.clear()
+    _CLICKHOUSE_SYNC_CLIENTS.clear()
