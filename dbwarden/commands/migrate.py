@@ -215,9 +215,14 @@ def migrate_single(
             if not to_version:
                 raise ValueError("--baseline requires --to-version to be specified.")
 
-            set_baseline_migration(migrations_dir, to_version, db_name)
+            applied = set_baseline_migration(migrations_dir, to_version, db_name)
             logger.log_baseline_set(to_version)
             console.print(f"Baseline set at version: {to_version}", style="green")
+            if applied:
+                _write_migration_snapshot(
+                    db_name=db_name,
+                    migration_id=f"baseline-{applied[-1]}",
+                )
             return
 
         filepaths_by_version = _get_filepaths_by_version(
