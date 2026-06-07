@@ -371,3 +371,39 @@ class TestRuntimeFlags:
 
         # Should be restored despite exception
         assert is_dev_mode() is True
+
+
+class TestDBWardenLifespan:
+    """Tests for the dbwarden_lifespan context manager."""
+
+    def test_lifespan_mode_check_calls_dispose(self):
+        """dbwarden_lifespan(mode='check') should call dispose_engines on exit."""
+        from dbwarden.fastapi.lifespan import dbwarden_lifespan
+        from dbwarden.fastapi import engines
+
+        engines._ASYNC_SESSION_FACTORIES["lifespan_test"] = "fake"
+
+        async def run():
+            async with dbwarden_lifespan(mode="none"):
+                pass
+
+        import asyncio
+        asyncio.run(run())
+
+        assert "lifespan_test" not in engines._ASYNC_SESSION_FACTORIES
+
+    def test_lifespan_mode_none_skips_startup_checks(self):
+        """dbwarden_lifespan(mode='none') should yield without running checks."""
+        from dbwarden.fastapi.lifespan import dbwarden_lifespan
+
+        ran = False
+
+        async def run():
+            nonlocal ran
+            async with dbwarden_lifespan(mode="none"):
+                ran = True
+
+        import asyncio
+        asyncio.run(run())
+
+        assert ran

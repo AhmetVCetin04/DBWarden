@@ -179,7 +179,7 @@ class TestMakeClickHouseDep:
 class TestDisposeEngines:
     """Tests for dispose_engines cleanup."""
 
-    def test_dispose_engines_clears_caches(self):
+    def test_dispose_engines_clears_fake_entries(self):
         from dbwarden.fastapi import engines
 
         engines._ASYNC_SESSION_FACTORIES["test"] = "fake"
@@ -189,3 +189,12 @@ class TestDisposeEngines:
 
         assert "test" not in engines._ASYNC_SESSION_FACTORIES
         assert "test" not in engines._CLICKHOUSE_ASYNC_CLIENTS
+
+    def test_dispose_engines_skips_non_bind_factories(self):
+        """_dispose_one should not crash on factories without a bind."""
+        from dbwarden.fastapi.engines import _dispose_one
+
+        class FakeNoBind:
+            pass
+
+        _dispose_one(FakeNoBind())  # must not raise
