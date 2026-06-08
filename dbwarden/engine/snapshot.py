@@ -1836,19 +1836,32 @@ def snapshot_diff_to_sql(
         elif op["type"] == "alter_table_comment":
             comment = op.get("comment") or ""
             prev = op.get("previous_comment") or ""
+            if backend == "sqlite":
+                c = comment.replace(chr(39), chr(39)+chr(39))
+                up = f"-- COMMENT ON TABLE {op['table']} IS '{c}';" if comment else f"-- COMMENT ON TABLE {op['table']} IS NULL;"
+                rb = f"-- COMMENT ON TABLE {op['table']} IS '{prev}';" if prev else f"-- COMMENT ON TABLE {op['table']} IS NULL;"
+            else:
+                up = f"COMMENT ON TABLE {op['table']} IS '{comment.replace(chr(39), chr(39)+chr(39))}';" if comment else f"COMMENT ON TABLE {op['table']} IS NULL;"
+                rb = f"COMMENT ON TABLE {op['table']} IS '{prev.replace(chr(39), chr(39)+chr(39))}';" if prev else f"COMMENT ON TABLE {op['table']} IS NULL;"
             statements.append(MigrationStatement(
                 order=StatementOrder.ALTER_TABLE_COMMENT,
-                upgrade_sql=f"COMMENT ON TABLE {op['table']} IS '{comment.replace(chr(39), chr(39)+chr(39))}';" if comment else f"COMMENT ON TABLE {op['table']} IS NULL;",
-                rollback_sql=f"COMMENT ON TABLE {op['table']} IS '{prev.replace(chr(39), chr(39)+chr(39))}';" if prev else f"COMMENT ON TABLE {op['table']} IS NULL;",
+                upgrade_sql=up, rollback_sql=rb,
             ))
             changes.append(Change(operation="alter_table_comment", table=op["table"]))
         elif op["type"] == "alter_column_comment":
             comment = op.get("comment") or ""
             prev = op.get("previous_comment") or ""
+            if backend == "sqlite":
+                c = comment.replace(chr(39), chr(39)+chr(39))
+                col = f"{op['table']}.{op['column']}"
+                up = f"-- COMMENT ON COLUMN {col} IS '{c}';" if comment else f"-- COMMENT ON COLUMN {col} IS NULL;"
+                rb = f"-- COMMENT ON COLUMN {col} IS '{prev}';" if prev else f"-- COMMENT ON COLUMN {col} IS NULL;"
+            else:
+                up = f"COMMENT ON COLUMN {op['table']}.{op['column']} IS '{comment.replace(chr(39), chr(39)+chr(39))}';" if comment else f"COMMENT ON COLUMN {op['table']}.{op['column']} IS NULL;"
+                rb = f"COMMENT ON COLUMN {op['table']}.{op['column']} IS '{prev.replace(chr(39), chr(39)+chr(39))}';" if prev else f"COMMENT ON COLUMN {op['table']}.{op['column']} IS NULL;"
             statements.append(MigrationStatement(
                 order=StatementOrder.ALTER_COLUMN_COMMENT,
-                upgrade_sql=f"COMMENT ON COLUMN {op['table']}.{op['column']} IS '{comment.replace(chr(39), chr(39)+chr(39))}';" if comment else f"COMMENT ON COLUMN {op['table']}.{op['column']} IS NULL;",
-                rollback_sql=f"COMMENT ON COLUMN {op['table']}.{op['column']} IS '{prev.replace(chr(39), chr(39)+chr(39))}';" if prev else f"COMMENT ON COLUMN {op['table']}.{op['column']} IS NULL;",
+                upgrade_sql=up, rollback_sql=rb,
             ))
             changes.append(Change(operation="alter_column_comment", table=op["table"], target=op["column"]))
         elif op["type"] == "alter_pg_column_meta":
@@ -1965,7 +1978,7 @@ def snapshot_diff_to_sql(
             changes.append(Change(operation=op["type"], table=op["table"]))
         elif op["type"] in ("add_check_constraint", "drop_check_constraint"):
             name = op["name"]
-            no_inherit = " NO INHERIT" if op.get("no_inherit") else ""
+            no_inherit = " NO INHERIT" if (op.get("no_inherit") and backend == "postgresql") else ""
             if op["type"] == "add_check_constraint":
                 expr = op.get("expression", "")
                 up = f"ALTER TABLE {op['table']} ADD CONSTRAINT {name} CHECK ({expr}){no_inherit};"
@@ -2027,7 +2040,10 @@ def snapshot_diff_to_sql(
             value = op["value"]
             after = op.get("after")
             after_clause = f" AFTER {after!r}" if after else ""
-            if op.get("revert"):
+            if backend == "sqlite":
+                up = f"-- ALTER TYPE {enum_name} ADD VALUE IF NOT EXISTS {value!r}{after_clause};"
+                rb = f"-- Revert: {value} was added to enum {enum_name}"
+            elif op.get("revert"):
                 up = f"-- Revert: {value} was added to enum {enum_name}"
                 rb = f"ALTER TYPE {enum_name} ADD VALUE IF NOT EXISTS {value!r}{after_clause};"
             else:
