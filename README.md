@@ -5,9 +5,10 @@
     <em>Migrations for FastAPI, without the DSL.</em>
 </p>
 <p align="center">
-  <a href="https://pypi.org/project/dbwarden"><img src="https://img.shields.io/pypi/v/dbwarden?color=%2334D058&label=pypi" alt="PyPI version"/></a>
-  <a href="https://pypi.org/project/dbwarden"><img src="https://img.shields.io/pypi/pyversions/dbwarden.svg?color=%2334D058" alt="Python versions"/></a>
-  <a href="https://github.com/emiliano-gandini-outeda/DBWarden/blob/main/LICENSE"><img src="https://img.shields.io/github/license/emiliano-gandini-outeda/DBWarden?color=%2334D058" alt="License"/></a>
+  <a href="https://pypi.org/project/dbwarden"><img src="https://img.shields.io/pypi/v/dbwarden?style=for-the-badge&logo=python&logoColor=white&label=PyPI&color=3776AB" alt="PyPI version"/></a>
+  <a href="https://pypi.org/project/dbwarden"><img src="https://img.shields.io/pypi/pyversions/dbwarden?style=for-the-badge&logo=python&logoColor=white&label=Python&color=3776AB" alt="Python versions"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-10AC84?style=for-the-badge" alt="License"/></a>
+  <a href="https://deepwiki.com/emiliano-gandini-outeda/dbwarden/"><img src="https://img.shields.io/badge/DeepWiki-8A2BE2?logo=readthedocs&logoColor=white&style=for-the-badge" alt="DeepWiki"/></a>
 </p>
 
 <p align="center">
