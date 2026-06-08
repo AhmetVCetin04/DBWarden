@@ -453,7 +453,11 @@ def extract_full_schema_snapshot(
                     col_entry["pg_type"] = {"kind": "array", "inner": str(type_obj.item_type), "dimensions": 1}
                     col_entry["type"] = "array"
                 elif type_str_lower in ("tsvector",):
-                    col_entry["pg_type"] = {"kind": "tsvector"}
+                    regconfig = getattr(type_obj, "regconfig", None)
+                    pg_type_entry: dict[str, Any] = {"kind": "tsvector"}
+                    if regconfig:
+                        pg_type_entry["config"] = str(regconfig)
+                    col_entry["pg_type"] = pg_type_entry
                     col_entry["type"] = "tsvector"
                 elif type_str_lower == "jsonb":
                     col_entry["pg_type"] = {"kind": "jsonb"}
@@ -519,6 +523,16 @@ def extract_full_schema_snapshot(
 
                 try:
                     row = _conn.execute(
+                        text("SELECT relpersistence FROM pg_class WHERE relname = :t"),
+                        {"t": table_name},
+                    ).fetchone()
+                    if row and row[0] == 'u':
+                        pg_table["pg_unlogged"] = True
+                except Exception:
+                    pass
+
+                try:
+                    row = _conn.execute(
                         text(
                             "SELECT spcname FROM pg_tablespace t "
                             "JOIN pg_class c ON c.reltablespace = t.oid "
@@ -545,9 +559,37 @@ def extract_full_schema_snapshot(
                     pass
 
                 try:
+                    part_row = _conn.execute(
+                        text(
+                            "SELECT p.partstrat, "
+                            "array_agg(a.attname ORDER BY a.attnum) AS part_columns, "
+                            "pg_get_expr(p.partexprs, p.partrelid) AS part_expr "
+                            "FROM pg_partitioned_table p "
+                            "JOIN pg_class c ON c.oid = p.partrelid "
+                            "LEFT JOIN pg_attribute a ON a.attrelid = p.partrelid AND a.attnum = ANY(p.partattrs) "
+                            "WHERE c.relname = :t "
+                            "GROUP BY p.partstrat, p.partexprs, p.partrelid"
+                        ),
+                        {"t": table_name},
+                    ).fetchone()
+                    if part_row:
+                        strat_map = {"r": "RANGE", "l": "LIST", "h": "HASH"}
+                        strategy = strat_map.get(part_row[0], part_row[0])
+                        part_columns = list(part_row[1] or [])
+                        part_expr = part_row[2]
+                        if part_expr:
+                            part_columns.append(part_expr.strip())
+                        pg_table["pg_partition"] = {
+                            "strategy": strategy,
+                            "columns": part_columns,
+                        }
+                except Exception:
+                    pass
+
+                try:
                     rows = _conn.execute(
                         text(
-                            "SELECT conname, pg_get_constraintdef(oid) AS definition "
+                            "SELECT conname, pg_get_constraintdef(oid) AS definition " 
                             "FROM pg_constraint "
                             "WHERE conrelid = CAST(:t AS regclass) AND contype = 'x'"
                         ),
@@ -713,6 +755,35 @@ def extract_full_schema_snapshot(
                 "columns": [],
                 "expression": ck.get("sqltext", ""),
             }
+
+        if database_type == "postgresql":
+            _pg_conn = engine.connect() if own_engine else connection
+            try:
+                no_inherit_rows = _pg_conn.execute(
+                    text("SELECT conname, connoinherit FROM pg_constraint WHERE conrelid = CAST(:t AS regclass) AND contype = 'c'"),
+                    {"t": table_name},
+                ).fetchall()
+                for r in no_inherit_rows:
+                    if r[1]:
+                        cname = r[0]
+                        if cname in constraints:
+                            constraints[cname]["no_inherit"] = True
+            except Exception:
+                pass
+            try:
+                defer_rows = _pg_conn.execute(
+                    text("SELECT conname, condeferrable, condeferred FROM pg_constraint WHERE conrelid = CAST(:t AS regclass) AND contype = 'u'"),
+                    {"t": table_name},
+                ).fetchall()
+                for r in defer_rows:
+                    cname = r[0]
+                    if cname in constraints:
+                        constraints[cname]["deferrable"] = bool(r[1])
+                        constraints[cname]["initially_deferred"] = bool(r[2])
+            except Exception:
+                pass
+            if own_engine:
+                _pg_conn.close()
 
     if database_type == "postgresql":
         try:
@@ -1517,6 +1588,41 @@ def diff_models_against_snapshot(
                     "unique": idx.unique,
                 })
 
+    # --- Enum ADD VALUE diff ---
+    snap_enums = snapshot.get("enums", {})
+    model_enum_values: dict[str, list[str]] = {}
+    for table in model_tables:
+        for col in table.columns:
+            pg_type = col.pg_meta.get("pg_type", {})
+            if pg_type.get("kind") == "enum":
+                type_name = pg_type.get("type_name", "")
+                if type_name:
+                    model_enum_values[type_name] = pg_type.get("values", [])
+    for enum_name, snap_values in snap_enums.items():
+        to_values = model_enum_values.get(enum_name)
+        if to_values is None:
+            continue
+        new_values = [v for v in to_values if v not in snap_values]
+        if new_values:
+            for v in new_values:
+                idx = to_values.index(v)
+                after = to_values[idx - 1] if idx > 0 else None
+                upgrade_ops.append({
+                    "type": "alter_enum_add_value",
+                    "enum_name": enum_name,
+                    "value": v,
+                    "after": after,
+                })
+                rollback_ops.append({
+                    "type": "alter_enum_add_value",
+                    "enum_name": enum_name,
+                    "value": v,
+                    "revert": True,
+                    "after": after,
+                })
+
+    # --- End Enum ADD VALUE diff ---
+
     return upgrade_ops, rollback_ops
 
 
@@ -1758,7 +1864,7 @@ def snapshot_diff_to_sql(
             to_val = op.get("to_value")
             from_val = op.get("from_value")
             if backend == "postgresql":
-                if key == "fillfactor":
+                if key == "pg_fillfactor":
                     if to_val is not None:
                         up = f"ALTER TABLE {op['table']} SET (fillfactor = {to_val});"
                     else:
@@ -1771,7 +1877,7 @@ def snapshot_diff_to_sql(
                         order=StatementOrder.ALTER_TABLE_OPTIONS,
                         upgrade_sql=up, rollback_sql=rb,
                     ))
-                elif key == "tablespace":
+                elif key == "pg_tablespace":
                     if to_val:
                         up = f"ALTER TABLE {op['table']} SET TABLESPACE {to_val};"
                     else:
@@ -1784,7 +1890,7 @@ def snapshot_diff_to_sql(
                         order=StatementOrder.ALTER_TABLE_OPTIONS,
                         upgrade_sql=up, rollback_sql=rb,
                     ))
-                elif key == "inherits":
+                elif key == "pg_inherits":
                     if to_val:
                         parents = ", ".join(to_val)
                         up = f"ALTER TABLE {op['table']} INHERIT {parents};"
@@ -1799,22 +1905,51 @@ def snapshot_diff_to_sql(
                         order=StatementOrder.ALTER_TABLE_OPTIONS,
                         upgrade_sql=up, rollback_sql=rb,
                     ))
+                elif key == "pg_unlogged":
+                    if to_val:
+                        up = f"ALTER TABLE {op['table']} SET UNLOGGED;"
+                    else:
+                        up = f"ALTER TABLE {op['table']} SET LOGGED;"
+                    if from_val:
+                        rb = f"ALTER TABLE {op['table']} SET UNLOGGED;"
+                    else:
+                        rb = f"ALTER TABLE {op['table']} SET LOGGED;"
+                    statements.append(MigrationStatement(
+                        order=StatementOrder.ALTER_TABLE_OPTIONS,
+                        upgrade_sql=up, rollback_sql=rb,
+                    ))
+                elif key == "pg_partition":
+                    up = f"-- Partition strategy changed for {op['table']}; requires table rebuild"
+                    rb = f"-- Cannot revert partition change for {op['table']}; requires table rebuild"
+                    statements.append(MigrationStatement(
+                        order=StatementOrder.ALTER_TABLE_OPTIONS,
+                        upgrade_sql=up, rollback_sql=rb,
+                    ))
             changes.append(Change(operation=f"alter_pg_table_{key}", table=op["table"]))
         elif op["type"] in ("add_unique_constraint", "drop_unique_constraint"):
             name = op["name"]
+            using = op.get("using")
+            using_clause = f" USING INDEX {using}" if using else ""
             if op["type"] == "add_unique_constraint":
                 cols = ", ".join(op.get("columns", []))
-                if backend == "postgresql":
-                    using = op.get("using")
-                    using_clause = f" USING INDEX {using}" if using else ""
-                    up = f"ALTER TABLE {op['table']} ADD CONSTRAINT {name} UNIQUE ({cols}){using_clause};"
-                else:
-                    up = f"ALTER TABLE {op['table']} ADD CONSTRAINT {name} UNIQUE ({cols});"
+                defer_clause = ""
+                if backend == "postgresql" and op.get("deferrable"):
+                    if op.get("initially_deferred"):
+                        defer_clause = " DEFERRABLE INITIALLY DEFERRED"
+                    else:
+                        defer_clause = " DEFERRABLE INITIALLY IMMEDIATE"
+                up = f"ALTER TABLE {op['table']} ADD CONSTRAINT {name} UNIQUE ({cols}){using_clause}{defer_clause};"
                 rb = f"ALTER TABLE {op['table']} DROP CONSTRAINT {name};"
             else:
                 up = f"ALTER TABLE {op['table']} DROP CONSTRAINT {name};"
                 cols = ", ".join(op.get("columns", []))
-                rb = f"ALTER TABLE {op['table']} ADD CONSTRAINT {name} UNIQUE ({cols});"
+                defer_clause = ""
+                if backend == "postgresql" and op.get("deferrable"):
+                    if op.get("initially_deferred"):
+                        defer_clause = " DEFERRABLE INITIALLY DEFERRED"
+                    else:
+                        defer_clause = " DEFERRABLE INITIALLY IMMEDIATE"
+                rb = f"ALTER TABLE {op['table']} ADD CONSTRAINT {name} UNIQUE ({cols}){using_clause}{defer_clause};"
             statements.append(MigrationStatement(
                 order=StatementOrder.ALTER_TABLE_CONSTRAINT,
                 upgrade_sql=up, rollback_sql=rb,
@@ -1830,14 +1965,15 @@ def snapshot_diff_to_sql(
             changes.append(Change(operation=op["type"], table=op["table"]))
         elif op["type"] in ("add_check_constraint", "drop_check_constraint"):
             name = op["name"]
+            no_inherit = " NO INHERIT" if op.get("no_inherit") else ""
             if op["type"] == "add_check_constraint":
                 expr = op.get("expression", "")
-                up = f"ALTER TABLE {op['table']} ADD CONSTRAINT {name} CHECK ({expr});"
+                up = f"ALTER TABLE {op['table']} ADD CONSTRAINT {name} CHECK ({expr}){no_inherit};"
                 rb = f"ALTER TABLE {op['table']} DROP CONSTRAINT IF EXISTS {name};"
             else:
                 up = f"ALTER TABLE {op['table']} DROP CONSTRAINT IF EXISTS {name};"
                 expr = op.get("expression", "")
-                rb = f"ALTER TABLE {op['table']} ADD CONSTRAINT {name} CHECK ({expr});"
+                rb = f"ALTER TABLE {op['table']} ADD CONSTRAINT {name} CHECK ({expr}){no_inherit};"
             statements.append(MigrationStatement(
                 order=StatementOrder.ALTER_TABLE_CONSTRAINT,
                 upgrade_sql=up, rollback_sql=rb,
@@ -1886,6 +2022,22 @@ def snapshot_diff_to_sql(
                 changes.append(Change(
                     operation="drop_index", table=op["table"],
                 ))
+        elif op["type"] == "alter_enum_add_value":
+            enum_name = op["enum_name"]
+            value = op["value"]
+            after = op.get("after")
+            after_clause = f" AFTER {after!r}" if after else ""
+            if op.get("revert"):
+                up = f"-- Revert: {value} was added to enum {enum_name}"
+                rb = f"ALTER TYPE {enum_name} ADD VALUE IF NOT EXISTS {value!r}{after_clause};"
+            else:
+                up = f"ALTER TYPE {enum_name} ADD VALUE IF NOT EXISTS {value!r}{after_clause};"
+                rb = f"-- Revert: {value} was added to enum {enum_name}"
+            statements.append(MigrationStatement(
+                order=StatementOrder.ALTER_TABLE_OPTIONS,
+                upgrade_sql=up, rollback_sql=rb,
+            ))
+            changes.append(Change(operation="alter_enum_add_value", table=enum_name, target=value))
 
     upgrade_sql, rollback_sql = _assemble_migration(statements)
     return upgrade_sql, rollback_sql, changes

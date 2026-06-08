@@ -950,6 +950,19 @@ def extract_column_info(column, db_name: str | None = None) -> Optional[ModelCol
                 }
             elif getattr(column.type, "enums", None) and getattr(column.type, "name", None):
                 pg_meta["pg_enum_name"] = column.type.name
+                pg_meta["pg_type"] = {
+                    "kind": "enum",
+                    "type_name": column.type.name,
+                    "values": list(column.type.enums),
+                }
+            else:
+                type_str_upper = type_str.upper()
+                if type_str_upper == "TSVECTOR":
+                    regconfig = getattr(column.type, "regconfig", None)
+                    pg_type_entry: dict[str, Any] = {"kind": "tsvector"}
+                    if regconfig:
+                        pg_type_entry["config"] = str(regconfig)
+                    pg_meta["pg_type"] = pg_type_entry
 
         return ModelColumn(
             name=name,
@@ -1077,6 +1090,12 @@ def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> 
     if backend == "clickhouse":
         if table.object_type == "table":
             sql += _render_clickhouse_table_suffix(table)
+    if backend == "postgresql" and table.pg_table:
+        pg_partition = table.pg_table.get("pg_partition")
+        if pg_partition:
+            strategy = pg_partition.get("strategy", "RANGE")
+            columns = pg_partition.get("columns", [])
+            sql += f"\nPARTITION BY {strategy} ({', '.join(columns)})"
     return sql
 
 

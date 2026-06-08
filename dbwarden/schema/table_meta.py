@@ -21,10 +21,12 @@ class PGTableMeta(TableMeta):
     pg_fillfactor: int | None = None
     pg_tablespace: str | None = None
     pg_inherits: str | None = None
+    pg_unlogged: bool = False
     pg_checks: list[dict[str, Any]] = []
     pg_uniques: list[dict[str, Any]] = []
     pg_excludes: list[dict[str, Any]] = []
     pg_indexes: list[dict[str, Any]] = []
+    pg_partition: dict[str, Any] | None = None
 
 
 class PGColumnMeta:

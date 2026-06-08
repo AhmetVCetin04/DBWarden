@@ -168,6 +168,9 @@ def _format_pg_type(col: dict) -> str | None:
     pg_type = col.get("pg_type") or {}
     kind = pg_type.get("kind")
     if kind == "tsvector":
+        config = pg_type.get("config")
+        if config:
+            return f"TSVECTOR({config!r})"
         return "TSVECTOR"
     if kind == "range":
         raw_type = col.get("type", "").upper().strip()
@@ -621,10 +624,26 @@ def _extract_postgresql_meta(inspector, connection, table_name: str, raw_columns
         table_meta["pg_indexes"] = pg_indexes
 
     if checks:
-        table_meta["pg_checks"] = [
-            {"name": ck.get("name"), "expression": ck.get("sqltext", "")}
-            for ck in checks
-        ]
+        no_inherit_checks: dict[str, bool] = {}
+        try:
+            rows = connection.execute(
+                text("SELECT conname, connoinherit FROM pg_constraint WHERE conrelid = CAST(:t AS regclass) AND contype = 'c'"),
+                {"t": table_name},
+            ).fetchall()
+            for r in rows:
+                if r[1]:
+                    no_inherit_checks[r[0]] = True
+        except Exception:
+            try:
+                connection.rollback()
+            except Exception:
+                pass
+        table_meta["pg_checks"] = []
+        for ck in checks:
+            entry: dict[str, Any] = {"name": ck.get("name"), "expression": ck.get("sqltext", "")}
+            if ck.get("name") in no_inherit_checks:
+                entry["no_inherit"] = True
+            table_meta["pg_checks"].append(entry)
     if uniques:
         table_meta["pg_uniques"] = [
             {"name": uq.get("name"), "columns": list(uq.get("column_names", []))}
@@ -652,6 +671,19 @@ def _extract_postgresql_meta(inspector, connection, table_name: str, raw_columns
 
     try:
         row = connection.execute(
+            text("SELECT relpersistence FROM pg_class WHERE relname = :t"),
+            {"t": table_name},
+        ).fetchone()
+        if row and row[0] == 'u':
+            table_meta["pg_unlogged"] = True
+    except Exception:
+        try:
+            connection.rollback()
+        except Exception:
+            pass
+
+    try:
+        row = connection.execute(
             text("SELECT spcname FROM pg_tablespace t JOIN pg_class c ON c.reltablespace = t.oid WHERE c.relname = :t"),
             {"t": table_name},
         ).fetchone()
@@ -671,6 +703,37 @@ def _extract_postgresql_meta(inspector, connection, table_name: str, raw_columns
         parents = [r[0] for r in rows]
         if parents:
             table_meta["pg_inherits"] = parents[0]
+    except Exception:
+        try:
+            connection.rollback()
+        except Exception:
+            pass
+
+    try:
+        part_row = connection.execute(
+            text(
+                "SELECT p.partstrat, "
+                "array_agg(a.attname ORDER BY a.attnum) AS part_columns, "
+                "pg_get_expr(p.partexprs, p.partrelid) AS part_expr "
+                "FROM pg_partitioned_table p "
+                "JOIN pg_class c ON c.oid = p.partrelid "
+                "LEFT JOIN pg_attribute a ON a.attrelid = p.partrelid AND a.attnum = ANY(p.partattrs) "
+                "WHERE c.relname = :t "
+                "GROUP BY p.partstrat, p.partexprs, p.partrelid"
+            ),
+            {"t": table_name},
+        ).fetchone()
+        if part_row:
+            strat_map = {"r": "RANGE", "l": "LIST", "h": "HASH"}
+            strategy = strat_map.get(part_row[0], part_row[0])
+            part_columns = list(part_row[1] or [])
+            part_expr = part_row[2]
+            if part_expr:
+                part_columns.append(part_expr.strip())
+            table_meta["pg_partition"] = {
+                "strategy": strategy,
+                "columns": part_columns,
+            }
     except Exception:
         try:
             connection.rollback()
@@ -843,7 +906,11 @@ def generate_models_cmd(
                         entry["pg_timestamptz"] = True
                     type_str_upper = str(type_obj).upper()
                     if type_str_upper == "TSVECTOR":
-                        entry["pg_type"] = {"kind": "tsvector"}
+                        config = getattr(type_obj, "regconfig", None)
+                        pg_type_entry: dict[str, Any] = {"kind": "tsvector"}
+                        if config:
+                            pg_type_entry["config"] = str(config)
+                        entry["pg_type"] = pg_type_entry
                     elif type_str_upper.endswith("RANGE"):
                         entry["pg_type"] = {"kind": "range"}
                     if col_name in fk_options_map:

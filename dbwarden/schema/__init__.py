@@ -1,3 +1,4 @@
+from dbwarden.schema._auto_schema import auto_schema
 from dbwarden.schema._base import DBWardenMeta, attach_meta, read_meta
 from dbwarden.schema._meta import FieldMeta
 from dbwarden.schema._meta_reader import apply_meta
@@ -12,6 +13,7 @@ from dbwarden.schema.table_meta import (
 __all__ = [
     "apply_meta",
     "attach_meta",
+    "auto_schema",
     "CHColumnMeta",
     "CHTableMeta",
     "DBWardenMeta",
