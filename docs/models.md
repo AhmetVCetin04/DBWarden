@@ -72,6 +72,8 @@ class User(Base):
 
 These attributes work with any `database_type`. Backend-specific subclasses (`PGTableMeta`, `CHTableMeta`) inherit all common attributes and add their own.
 
+For IDE autocomplete on column-level inner classes, use `PGColumnMeta` for PostgreSQL or `CHColumnMeta` for ClickHouse. The unified `FieldMeta` class contains all backend-specific column attributes (`pg_*`, `ch_*`, `my_*`, `mdb_*`, `sq_*`) for cross-backend projects.
+
 ## PostgreSQL Model Metadata
 
 When `database_type="postgresql"`, DBWarden supports first-class PostgreSQL metadata via `class Meta(PGTableMeta)` inner classes. This is the **only** supported surface: `mapped_column(info=...)` raises `DBWardenConfigError`.

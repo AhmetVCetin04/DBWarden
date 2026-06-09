@@ -181,6 +181,44 @@ Review the generated code before using it:
 - Generated `class Meta` attributes are complete but may need adjustment (for example, you might want different index names or additional column hints).
 - Partitioning, TTL, and engine settings are captured from the live database. If the database schema has drifted from what you intend, edit the model before running `make-migrations`.
 
+## Auto-Generated Pydantic Schemas with `@auto_schema`
+
+Use `@auto_schema` to generate four Pydantic schema classes on your model:
+
+| Attribute | Contents |
+|-----------|---------|
+| `Model.Schema` | All mapped columns |
+| `Model.CreateSchema` | Excludes server-defaulted columns (PKs with identity, `server_default`) |
+| `Model.UpdateSchema` | All fields optional |
+| `Model.PublicSchema` | Excludes fields where `public=False` or name starts with `_` |
+
+```python
+from dbwarden.schema import auto_schema
+
+@auto_schema
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True)
+    email = Column(String(255))
+    password_hash = Column(String(255))
+
+    class Meta:
+        class email:
+            comment = "Primary contact email"
+            public = True
+
+        class password_hash:
+            public = False
+
+# PublicSchema excludes password_hash and any _prefixed fields
+public = User.PublicSchema(email="alice@example.com")
+```
+
+The decorator reads `class Meta` to infer `SchemaConfig`, then calls `schemap` to build the Pydantic models. Column `comment` values are injected into Pydantic field descriptions, and backend-specific metadata (`pg_*`, `ch_*`, etc.) is included in `json_schema_extra.dbwarden_backend_meta`.
+
+`@auto_schema` requires the `schemap` dependency (included with `pip install dbwarden`).
+
 ## When to Use Manual Migrations
 
 Auto-generated migrations handle most cases, but some schema changes require a manual migration via `dbwarden new`:
@@ -199,3 +237,4 @@ DBWarden emits SQL comment placeholders for unsupported operations with instruct
 - **Review generated migrations**: always read the `.sql` file before running `dbwarden migrate`, especially for ClickHouse where DDL is not transactional.
 - **Use `--dev` for local development**: configure a `dev_database_url` (SQLite works well) and use `dbwarden --dev` to iterate quickly without touching your real database.
 - **Keep Meta classes minimal**: only set attributes that differ from the default. Default values are omitted from generated migrations, reducing noise.
+- **Use `@auto_schema` for API projects**: generates Pydantic schemas from your model annotations. Fields with `public=False` or a leading `_` are excluded from `PublicSchema`.
