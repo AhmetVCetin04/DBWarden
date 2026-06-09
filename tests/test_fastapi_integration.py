@@ -108,3 +108,75 @@ class TestHealthRouter:
 
         response = client.get("/health/unknown")
         assert response.status_code == 404
+
+    def test_liveness_endpoint(self):
+        from fastapi import FastAPI
+        from fastapi.testclient import TestClient
+        from dbwarden.fastapi import DBWardenHealthRouter
+
+        app = FastAPI()
+        app.include_router(DBWardenHealthRouter(), prefix="/health")
+        client = TestClient(app)
+
+        resp = client.get("/health/liveness")
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "alive"
+
+    def test_readiness_endpoint(self, monkeypatch):
+        from fastapi import FastAPI
+        from fastapi.testclient import TestClient
+        from dbwarden.fastapi import DBWardenHealthRouter
+
+        app = FastAPI()
+
+        class FakeResult:
+            status = "ok"
+            database = "primary"
+            connected = True
+            error = None
+            pending_migrations = 0
+            applied_migrations = 5
+            pending_seeds = 0
+            applied_seeds = 1
+            lock_active = False
+
+            def to_database_health(self):
+                from dbwarden.fastapi.types import DatabaseHealth
+                return DatabaseHealth(
+                    database=self.database, status=self.status,
+                    connected=self.connected, pending_migrations=self.pending_migrations,
+                    applied_migrations=self.applied_migrations, pending_seeds=self.pending_seeds,
+                    applied_seeds=self.applied_seeds, lock_active=self.lock_active, error=self.error,
+                )
+
+        def fake_check(**kw):
+            return [FakeResult()]
+
+        def fake_cfg():
+            class Cfg:
+                databases = {"primary": object()}
+            return Cfg()
+
+        monkeypatch.setattr("dbwarden.fastapi.health.check_startup", fake_check)
+        monkeypatch.setattr("dbwarden.fastapi.health.get_multi_db_config", fake_cfg)
+
+        app.include_router(DBWardenHealthRouter(), prefix="/health")
+        client = TestClient(app)
+        resp = client.get("/health/readiness")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "ok"
+        assert len(data["databases"]) == 1
+
+    def test_liveness_auth_required(self):
+        from fastapi import FastAPI
+        from fastapi.testclient import TestClient
+        from dbwarden.fastapi import DBWardenHealthRouter
+
+        app = FastAPI()
+        app.include_router(DBWardenHealthRouter(auth_mode="authenticated", api_key="secret"), prefix="/health")
+        client = TestClient(app)
+
+        assert client.get("/health/liveness").status_code == 401
+        assert client.get("/health/liveness", headers={"X-API-Key": "wrong"}).status_code == 403
+        assert client.get("/health/liveness", headers={"X-API-Key": "secret"}).status_code == 200
