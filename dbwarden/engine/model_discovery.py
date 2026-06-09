@@ -507,11 +507,6 @@ def _render_clickhouse_table_suffix(table: ModelTable) -> str:
     else:
         parts.append(f"ENGINE = {engine_name}()")
 
-    settings = options.get("ch_settings")
-    if settings:
-        settings_str = ", ".join(f"{k}={v}" for k, v in settings.items())
-        parts.append(f"SETTINGS {settings_str}")
-
     order_by = options.get("ch_order_by")
     if order_by is not None:
         parts.append(f"ORDER BY {_format_clickhouse_expression(order_by)}")
@@ -531,6 +526,11 @@ def _render_clickhouse_table_suffix(table: ModelTable) -> str:
     ttl = options.get("ch_ttl")
     if ttl:
         parts.append("TTL " + ", ".join(ttl) if isinstance(ttl, list) else f"TTL {ttl}")
+
+    settings = options.get("ch_settings")
+    if settings:
+        settings_str = ", ".join(f"{k}={v}" for k, v in settings.items())
+        parts.append(f"SETTINGS {settings_str}")
 
     return "\n" + "\n".join(parts)
 
@@ -1274,20 +1274,21 @@ def _generate_clickhouse_materialized_view_sql(
         parts[0] += f" TO {to_table}"
     parts[0] += f" (\n{columns_sql}\n)"
 
-    engine_raw = options.get("ch_engine", "MergeTree")
-    if isinstance(engine_raw, str):
-        engine_name = engine_raw
-        engine_args = []
-    elif isinstance(engine_raw, tuple):
-        engine_name = engine_raw[0] if engine_raw else "MergeTree"
-        engine_args = list(str(a) for a in engine_raw[1:])
-    else:
-        engine_name = "MergeTree"
-        engine_args = []
-    if engine_args:
-        parts.append(f"ENGINE = {engine_name}({', '.join(engine_args)})")
-    else:
-        parts.append(f"ENGINE = {engine_name}()")
+    if not to_table:
+        engine_raw = options.get("ch_engine", "MergeTree")
+        if isinstance(engine_raw, str):
+            engine_name = engine_raw
+            engine_args = []
+        elif isinstance(engine_raw, tuple):
+            engine_name = engine_raw[0] if engine_raw else "MergeTree"
+            engine_args = list(str(a) for a in engine_raw[1:])
+        else:
+            engine_name = "MergeTree"
+            engine_args = []
+        if engine_args:
+            parts.append(f"ENGINE = {engine_name}({', '.join(engine_args)})")
+        else:
+            parts.append(f"ENGINE = {engine_name}()")
 
     order_by = options.get("ch_order_by")
     if order_by is not None:
@@ -1384,6 +1385,58 @@ def extract_tables_from_database(sqlalchemy_url: str) -> dict[str, set[str]]:
     return tables
 
 
+def _extract_create_table_columns(create_stmt: str) -> tuple[str | None, set[str]]:
+    """Extract table name and column names from a CREATE TABLE statement.
+
+    Uses balanced-paren matching to correctly extract the column list,
+    handling CH-style ENGINE/SETTINGS clauses that follow the closing paren.
+    """
+    create_match = re.search(
+        r"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(\w+)\s*\(",
+        create_stmt,
+        re.IGNORECASE,
+    )
+    if not create_match:
+        return None, set()
+
+    table_name = create_match.group(1)
+    start = create_match.end() - 1
+
+    # Balanced-paren scan to find the column list closing ')'
+    depth = 1
+    i = start + 1
+    while i < len(create_stmt) and depth > 0:
+        if create_stmt[i] == '(':
+            depth += 1
+        elif create_stmt[i] == ')':
+            depth -= 1
+        i += 1
+
+    if depth != 0:
+        return table_name, set()
+
+    columns_str = create_stmt[start + 1 : i - 1]
+    column_names: set[str] = set()
+
+    # Split on top-level commas (commas not inside nested parens)
+    column_parts = re.split(r",\s*(?![^()]*\))", columns_str)
+    for part in column_parts:
+        part = part.strip()
+        col_match = re.match(r"(\w+)", part, re.IGNORECASE)
+        if col_match:
+            col_name = col_match.group(1).lower()
+            if col_name not in (
+                "primary",
+                "foreign",
+                "unique",
+                "check",
+                "constraint",
+            ):
+                column_names.add(col_name)
+
+    return table_name, column_names
+
+
 def extract_tables_from_migrations(migrations_dir: str) -> dict[str, set[str]]:
     """
     Extract table names and their columns from existing migrations.
@@ -1408,37 +1461,11 @@ def extract_tables_from_migrations(migrations_dir: str) -> dict[str, set[str]]:
         statements = parse_upgrade_statements(filepath)
 
         for stmt in statements:
-            create_match = re.search(
-                r"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(\w+)\s*\(",
-                stmt,
-                re.IGNORECASE,
-            )
-            if create_match:
-                table_name = create_match.group(1)
-
-                columns_str_match = re.search(r"\((.+)\)", stmt, re.DOTALL)
-                if columns_str_match:
-                    columns_str = columns_str_match.group(1)
-                    column_names = set()
-
-                    column_parts = re.split(r",\s*(?![^()]*\))", columns_str)
-                    for part in column_parts:
-                        part = part.strip()
-                        col_match = re.match(r"(\w+)", part, re.IGNORECASE)
-                        if col_match:
-                            col_name = col_match.group(1).lower()
-                            if col_name not in (
-                                "primary",
-                                "foreign",
-                                "unique",
-                                "check",
-                                "constraint",
-                            ):
-                                column_names.add(col_name)
-
-                    if table_name in tables:
-                        tables[table_name].update(column_names)
-                    else:
-                        tables[table_name] = column_names
+            table_name, column_names = _extract_create_table_columns(stmt)
+            if table_name and column_names:
+                if table_name in tables:
+                    tables[table_name].update(column_names)
+                else:
+                    tables[table_name] = column_names
 
     return tables

@@ -49,11 +49,12 @@ def test_format_table_rename_warning_multiple():
 
 
 def test_generate_migration_sql_with_table_rename_and_column_rename():
+    set_dev_mode(True)
     with tempfile.TemporaryDirectory() as tmpdir:
-        _write_migration(
-            tmpdir,
-            "0001_create.sql",
-            """-- upgrade
+            _write_migration(
+                tmpdir,
+                "0001_create.sql",
+                """-- upgrade
 
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER NOT NULL PRIMARY KEY,
@@ -64,22 +65,22 @@ CREATE TABLE IF NOT EXISTS users (
 
 DROP TABLE users
 """,
-        )
-        accounts = ModelTable(
-            name="accounts",
-            columns=[
-                ModelColumn("id", "INTEGER", False, True, False, None, None),
-                ModelColumn("full_name", "VARCHAR", True, False, False, None, None),
-            ],
-        )
-        upgrade_sql, rollback_sql, changes = generate_migration_sql(
-            [accounts],
-            migrations_dir=tmpdir,
-            confirmed_table_intents={("users", "accounts")},
-            table_resolved_from_map={("users", "accounts"): "rename_flag"},
-        )
-        assert any(c.operation == "rename_table" for c in changes)
-        assert "ALTER TABLE users RENAME TO accounts;" in upgrade_sql
+            )
+            accounts = ModelTable(
+                name="accounts",
+                columns=[
+                    ModelColumn("id", "INTEGER", False, True, False, None, None),
+                    ModelColumn("full_name", "VARCHAR", True, False, False, None, None),
+                ],
+            )
+            upgrade_sql, rollback_sql, changes = generate_migration_sql(
+                [accounts],
+                migrations_dir=tmpdir,
+                confirmed_table_intents={("users", "accounts")},
+                table_resolved_from_map={("users", "accounts"): "rename_flag"},
+            )
+            assert any(c.operation == "rename_table" for c in changes)
+            assert "ALTER TABLE users RENAME TO accounts;" in upgrade_sql
 
 
 def test_generate_migration_sql_table_rename_no_snapshot():
