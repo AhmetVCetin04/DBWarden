@@ -3,11 +3,33 @@ set -euo pipefail
 
 echo "=== 06: Safety & Impact Analysis ==="
 
-# Run full safety check
+# ── dbwarden check ─────────────────────────────────────────────
+# Scans all migration files (both applied and pending) and flags
+# potential problems:
+#   - DROP COLUMN / DROP TABLE (destructive)
+#   - ALTER COLUMN TYPE that might truncate
+#   - ALTER COLUMN SET NOT NULL on a table with NULLs
+#   - Missing rollback sections
+# Run this in CI before merging any schema change PR.
 echo "--- Safety check on all migrations ---"
 dbwarden check --database primary 2>&1
 
-# Check impact of a migration on source code
+# ── dbwarden check-impact ──────────────────────────────────────
+# Goes further than check: it scans your application source code
+# to find references to the columns/tables being changed.
+# It uses AST parsing with a grep fallback, so results reflect
+# actual code structure, not just text search.
+#
+# Example output:
+#   drop_column on users.username
+#     References: 2
+#       app/routes/users.py:34  attribute_access
+#         .username
+#       app/templates/profile.jinja2:12  grep
+#         user.username
+#
+# Run this before any destructive deploy to identify code that
+# needs updating before the schema change ships.
 echo ""
 echo "--- Code impact analysis ---"
 # Find the latest migration to check

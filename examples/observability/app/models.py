@@ -6,6 +6,15 @@ class Base(DeclarativeBase):
     pass
 
 
+# Simple User model for the observability demo.
+# The metrics and query tracing middleware are the main focus of
+# this example — the model is minimal to keep attention on the
+# observability tooling.
+#
+# When QueryTracingMiddleware is active, every SQL query executed
+# through this model's session is logged with duration, database
+# name, and the SQL statement (truncated).
+
 class User(Base):
     __tablename__ = "users"
 

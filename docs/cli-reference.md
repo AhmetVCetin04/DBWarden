@@ -46,7 +46,7 @@ dbwarden settings default-database primary
 dbwarden settings database-add analytics \
   --type clickhouse \
   --url "http://user:pass@localhost:8123/analytics" \
-  --model-path app/models/analytics
+  --model-path app.models.analytics
 ```
 
 Options:
@@ -245,7 +245,7 @@ dbwarden seed apply --database primary --dry-run
 dbwarden seed apply --all
 ```
 
-Options: `--database`, `--all`, `--version`, `--dry-run`, `--verbose`
+Options: `--database`, `--all` (`-a`), `--version`, `--dry-run`, `--verbose`
 
 ### `seed list`
 
@@ -288,7 +288,7 @@ dbwarden check-db --database primary
 dbwarden check-db --database primary --out json
 ```
 
-Output formats: `txt`, `json`, `yaml`
+Output formats: `txt`, `json`, `yaml`, `sql`
 
 ### `check`
 

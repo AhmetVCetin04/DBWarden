@@ -20,7 +20,7 @@ default = "primary"
 database_type = "postgresql"
 sqlalchemy_url = "postgresql://user:password@localhost:5432/main"
 migrations_dir = "migrations/primary"
-model_paths = ["app/models/api"]
+model_paths = ["app.models.api"]
 ```
 
 ## After: Python configuration
@@ -35,7 +35,7 @@ primary = database_config(
     database_type="postgresql",
     database_url_sync="postgresql://user:password@localhost:5432/main",
     migrations_dir="migrations/primary",
-    model_paths=["app/models/api"],
+    model_paths=["app.models.api"],
 )
 ```
 
@@ -244,5 +244,5 @@ If migration causes issues, you can always:
 1. Recreate `warden.toml` with the original configuration
 2. Run DBWarden version that supports TOML (pre-0.5)
 
-However, the Python-based approach is the future direction and offers significant benefits.
+However, the Python-based approach is the recommended direction (0.9+) and offers significant benefits.
 

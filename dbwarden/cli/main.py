@@ -584,7 +584,7 @@ def squash(
 
 @app.command()
 def config():
-    """Display current warden.toml configuration."""
+    """Display current Python configuration."""
     handle_config()
 
 

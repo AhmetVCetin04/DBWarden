@@ -2,6 +2,12 @@ from datetime import datetime
 from pydantic import BaseModel, EmailStr
 
 
+# Pydantic schemas for the FastAPI CRUD routes.
+# In a real project, you might replace these with the auto-
+# generated schemas from @auto_schema (see examples/auto-schema/)
+# to eliminate the duplication between ORM models and API schemas.
+
+
 class UserBase(BaseModel):
     email: EmailStr
     username: str
@@ -26,4 +32,6 @@ class UserResponse(UserBase):
     updated_at: datetime
 
     class Config:
+        # Tells Pydantic to read data from ORM model attributes
+        # (not just dict keys), so model_validate(user_instance) works.
         from_attributes = True

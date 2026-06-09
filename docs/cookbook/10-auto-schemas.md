@@ -34,7 +34,7 @@ class User(Base):
     full_name = Column(String(200), nullable=True)
     password_hash = Column(String(255), nullable=False)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.now(UTC))
+    created_at = Column(DateTime, server_default=text("CURRENT_TIMESTAMP"))
 
     class Meta(TableMeta):
         comment = "User accounts with auto-generated Pydantic schemas"
@@ -101,7 +101,7 @@ print(public.model_dump())
 
 All mapped columns, including those marked `public = False`.
 
-## Step 4: Controlling Visibility
+## Step 3: Controlling Visibility
 
 | Technique | Effect |
 |-----------|--------|
@@ -110,7 +110,7 @@ All mapped columns, including those marked `public = False`.
 | `SchemaConfig(exclude_public=["field"])` | Excluded from PublicSchema |
 | `SchemaConfig(exclude_create=["field"])` | Excluded from CreateSchema |
 
-## Step 5: Customizing Schema Generation
+## Step 4: Customizing Schema Generation
 
 ```python
 from dbwarden.schema import auto_schema, SchemaConfig

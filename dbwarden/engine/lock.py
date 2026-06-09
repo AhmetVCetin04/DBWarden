@@ -1,7 +1,5 @@
-import os
 import time
 from contextlib import contextmanager
-from typing import Optional
 
 from dbwarden.config import get_config
 from dbwarden.exceptions import LockError
@@ -29,7 +27,7 @@ def migration_lock(timeout: int = 300):
     logger = get_logger()
     config = get_config()
 
-    if not check_lock():
+    if check_lock():
         raise LockError(
             "Migration lock is already held. Another migration process may be running. "
             "Use 'dbwarden unlock' to release the lock if necessary."

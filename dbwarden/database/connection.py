@@ -1,6 +1,5 @@
 import logging
 from contextlib import contextmanager
-from functools import lru_cache
 from typing import Any, Generator
 
 from sqlalchemy import create_engine, text
@@ -26,19 +25,6 @@ def _convert_url_to_clickhouse_dialect(url: str) -> str:
         return f"clickhousedb://{username}@{host}:{port}/{database}"
 
     return f"clickhousedb://{url}"
-
-
-@lru_cache(maxsize=4)
-def _get_engine(url: str, db_type: str = "postgresql") -> Engine:
-    """Create SQLAlchemy engine with dialect-specific URL handling."""
-    if db_type == "clickhouse":
-        url = _convert_url_to_clickhouse_dialect(url)
-    return create_engine(url=url)
-
-
-def _get_engine_key(url: str, db_type: str) -> tuple[str, str]:
-    """Cache key for engine - includes db_type for ClickHouse URL conversion."""
-    return (url, db_type)
 
 
 _engine_cache: dict[tuple[str, str], Engine] = {}

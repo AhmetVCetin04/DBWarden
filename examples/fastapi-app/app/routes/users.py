@@ -9,6 +9,19 @@ from app.schemas import UserCreate, UserResponse, UserUpdate
 router = APIRouter(prefix="/users", tags=["users"])
 
 
+# ── Session injection ──────────────────────────────────────────
+# The `session: primary.async_session` parameter is a FastAPI
+# dependency annotation.  Behind the scenes, this:
+#   1. Opens a new async database session from the connection pool
+#      configured in config.py
+#   2. Passes it to the route handler
+#   3. Commits (or rolls back on exception) when the handler returns
+#   4. Closes the session and returns it to the pool
+#
+# No manual session management, no middleware, no context vars.
+# The session is auto-rolled-back if an exception escapes the handler.
+
+
 @router.get("/", response_model=list[UserResponse])
 async def list_users(
     session: primary.async_session,

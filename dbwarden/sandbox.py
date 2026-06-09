@@ -207,6 +207,10 @@ def _sandboxed_load(path: Path, base_dir: Path) -> None:
     module_name = f"_dbwarden_config_{abs(hash(str(path)))}"
     filepath = str(path)
 
+    # Register the restricted module finder to block non-dbwarden imports
+    finder = RestrictedModuleFinder(base_dir)
+    sys.meta_path.insert(0, finder)
+
     # Create restricted file loader with filepath
     file_loader = RestrictedFileLoader(filepath, base_dir)
 
@@ -228,9 +232,11 @@ def _sandboxed_load(path: Path, base_dir: Path) -> None:
     except Exception as e:
         raise ConfigurationError(f"Failed to load config from {path}: {e}") from e
     finally:
-        # Clean up sys.modules
+        # Clean up sys.modules and meta_path
         if module_name in sys.modules:
             del sys.modules[module_name]
+        if finder in sys.meta_path:
+            sys.meta_path.remove(finder)
 
 
 def _unsafe_load(path: Path) -> None:

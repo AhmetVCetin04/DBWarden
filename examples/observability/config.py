@@ -1,6 +1,10 @@
 import os
 from dbwarden import database_config
 
+# Same pattern as the fastapi-app config, but with environment
+# variable overrides so the config can adapt to Docker networking.
+# When running via docker-compose, set DATABASE_URL to point at
+# the postgres service hostname.
 primary = database_config(
     database_name="primary",
     default=True,

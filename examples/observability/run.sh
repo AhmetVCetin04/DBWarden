@@ -5,13 +5,19 @@ echo "=== Observability Example ==="
 echo "This requires Docker for PostgreSQL, Prometheus, and Grafana."
 echo ""
 
-# Start services
+# ── Start services ────────────────────────────────────────────
+# docker-compose.yml defines three services:
+#   postgres    — PostgreSQL 16 on port 5432
+#   prometheus  — Prometheus on port 9090, configured to scrape
+#                 the FastAPI app's /metrics endpoint
+#   grafana     — Grafana on port 3000, with Prometheus as the
+#                 default data source (anonymous access enabled)
 echo "Starting PostgreSQL, Prometheus, and Grafana..."
 docker compose up -d
 echo "Waiting for services to be ready..."
 sleep 5
 
-# Initialize and migrate
+# ── Initialize and migrate ────────────────────────────────────
 echo ""
 echo "--- Initializing ---"
 dbwarden init 2>&1

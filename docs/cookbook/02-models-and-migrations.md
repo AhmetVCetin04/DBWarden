@@ -28,7 +28,7 @@ class User(Base):
     username = Column(String(100), unique=True, nullable=False)
     full_name = Column(String(200), nullable=True)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.now(UTC))
+    created_at = Column(DateTime, server_default=text("CURRENT_TIMESTAMP"))
 
     class Meta(TableMeta):
         comment = "Core user accounts"
@@ -41,7 +41,7 @@ Key points:
 
 - `unique=True` on `email` and `username` generates `UNIQUE` constraints
 - `nullable=True` (the default) allows `NULL`; `nullable=False` adds `NOT NULL`
-- `default=` becomes a `DEFAULT` clause in the DDL
+- `server_default=text(...)` becomes a database-level `DEFAULT` clause in the DDL; `default=` is a Python-level default and is not rendered in SQL
 - `class Meta(TableMeta)` is how we attach table-level metadata
 - `IndexSpec` generates a named `CREATE INDEX` statement
 
@@ -55,7 +55,7 @@ class Post(Base):
     title = Column(String(255), nullable=False)
     body = Column(Text, nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, server_default=text("CURRENT_TIMESTAMP"))
 
     class Meta(TableMeta):
         comment = "User blog posts"
@@ -81,7 +81,7 @@ class Product(Base):
     price = Column(Float, nullable=False)
     description = Column(Text, nullable=True)
     in_stock = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.now(UTC))
+    created_at = Column(DateTime, server_default=text("CURRENT_TIMESTAMP"))
 
     class Meta(TableMeta):
         comment = "Product catalog"

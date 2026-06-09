@@ -1,6 +1,8 @@
 # DBWarden Examples
 
 Runnable example projects demonstrating DBWarden workflows.
+Each directory maps to one or more sections in the cookbook docs
+at [`docs/cookbook/`](../docs/cookbook/index.md).
 
 ## Getting Started
 
@@ -19,9 +21,30 @@ bash scripts/03-apply-inspect.sh
 | Directory | Sections | What It Covers | Requires |
 |-----------|----------|----------------|----------|
 | `core/` | 1–7 | Full SQL workflow: setup, models, migrations, apply, rollback, inspect, offline, safety, seeds | Nothing (SQLite) |
-| `multi-database/` | 8 | PostgreSQL + ClickHouse in one project | Docker |
-| `fastapi-app/` | 9 | FastAPI with health, session DI, lifespan | Docker (PostgreSQL) |
-| `auto-schema/` | 10 | Auto-generated Pydantic schemas from models | Nothing (SQLite) |
-| `observability/` | 11 | Prometheus metrics, JSON logging, query tracing | Docker |
+| `multi-database/` | 8 | PostgreSQL + ClickHouse in one project with separate model paths and migration directories | Docker |
+| `fastapi-app/` | 9 | FastAPI with health endpoints, async session DI via `primary.async_session`, and migration routers | Docker (PostgreSQL) |
+| `auto-schema/` | 10 | Auto-generated Pydantic schemas from model annotations using `@auto_schema` | Nothing (SQLite) |
+| `observability/` | 11 | Prometheus metrics, structured JSON logging, query tracing middleware | Docker |
 
-Detailed walkthroughs for each section are in [`docs/cookbook/`](../docs/cookbook/index.md).
+## How These Examples Work
+
+Each example is self-contained:
+
+1. **`dbwarden.py`** — configuration file that registers database targets.
+   The CLI discovers it automatically when you run commands from that directory.
+
+2. **`app/models.py`** — SQLAlchemy model definitions with optional
+   `class Meta(TableMeta)` annotations for comments, indexes, and checks.
+
+3. **Shell scripts** — runnable command sequences that demonstrate the
+   CLI workflow step by step.  Each script includes detailed comments
+   explaining what each command does behind the scenes.
+
+4. **Docker-based examples** (`multi-database`, `fastapi-app`, `observability`)
+   include a `docker-compose.yml` or `run.sh` to start the required services.
+
+## Detailed Walkthroughs
+
+See [`docs/cookbook/index.md`](../docs/cookbook/index.md) for the full
+chapter-by-chapter guide with annotated SQL output, CLI flags, and
+expected output.

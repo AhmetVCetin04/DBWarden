@@ -412,14 +412,14 @@ primary = database_config(
     default=True,
     database_type="postgresql",
     database_url_sync="postgresql://user:password@localhost:5432/main",
-    model_paths=["app/models/api"],
+    model_paths=["app.models.api"],
 )
 
 analytics = database_config(
     database_name="analytics",
     database_type="clickhouse",
     database_url_sync="http://clickhouse:password@clickhouse-host:8123/analytics",
-    model_paths=["app/models/analytics"],
+    model_paths=["app.models.analytics"],
 )
 ```
 

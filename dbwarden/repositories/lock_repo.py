@@ -1,7 +1,11 @@
+import logging
+
 from sqlalchemy import text
 
 from dbwarden.database.connection import get_db_connection
 from dbwarden.database.queries import QueryMethod, get_query
+
+logger = logging.getLogger("dbwarden.lock")
 
 
 def create_lock_table_if_not_exists(db_name: str | None = None) -> None:
@@ -16,7 +20,8 @@ def acquire_lock(db_name: str | None = None) -> bool:
         with get_db_connection(db_name) as connection:
             connection.execute(text(get_query(QueryMethod.ACQUIRE_LOCK, db_name)))
         return True
-    except Exception:
+    except Exception as exc:
+        logger.warning("Failed to acquire migration lock: %s", exc)
         return False
 
 
@@ -26,7 +31,8 @@ def release_lock(db_name: str | None = None) -> bool:
         with get_db_connection(db_name) as connection:
             connection.execute(text(get_query(QueryMethod.RELEASE_LOCK, db_name)))
         return True
-    except Exception:
+    except Exception as exc:
+        logger.warning("Failed to release migration lock: %s", exc)
         return False
 
 
@@ -39,5 +45,6 @@ def check_lock(db_name: str | None = None) -> bool:
             )
             locked = result.scalar_one_or_none()
             return locked is True
-    except Exception:
+    except Exception as exc:
+        logger.debug("Lock check failed (table may not exist yet): %s", exc)
         return False

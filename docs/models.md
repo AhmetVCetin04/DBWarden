@@ -10,7 +10,7 @@ primary = database_config(
     default=True,
     database_type="postgresql",
     database_url_sync="postgresql://user:pass@localhost:5432/main",
-    model_paths=["app/models"],
+    model_paths=["app.models"],
 )
 ```
 

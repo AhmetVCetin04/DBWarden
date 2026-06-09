@@ -1,4 +1,7 @@
 services:
+  # PostgreSQL — transactional database backend.
+  # The dbwarden migration system connects to this to apply
+  # schema changes and store migration tracking data.
   postgres:
     image: postgres:16
     environment:
@@ -8,6 +11,9 @@ services:
     ports:
       - "5432:5432"
 
+  # ClickHouse — analytics database backend.
+  # Uses the MergeTree engine family configured via CHTableMeta.
+  # Port 8123 is the HTTP interface; port 9000 is the native TCP.
   clickhouse:
     image: clickhouse/clickhouse-server:latest
     ports:

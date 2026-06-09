@@ -5,8 +5,20 @@ from sqlalchemy import (
 from sqlalchemy.orm import declarative_base
 from dbwarden import TableMeta, IndexSpec
 
+# Every SQLAlchemy model must inherit from a common declarative base.
+# DBWarden discovers models by scanning for classes that inherit from it.
 Base = declarative_base()
 
+
+# ── TableMeta ──────────────────────────────────────────────────
+# The inner Meta class (inheriting from TableMeta) is how you attach
+# table-level metadata that DBWarden translates into DDL at migration
+# time.  The comment becomes a COMMENT ON TABLE in PostgreSQL, and
+# IndexSpec entries become CREATE INDEX statements.
+#
+# Columns defined directly on the model (via Column()) are read by
+# DBWarden's schema scanner — their types, nullability, defaults,
+# unique constraints, and foreign keys all feed into the generated SQL.
 
 class User(Base):
     __tablename__ = "users"
@@ -21,6 +33,8 @@ class User(Base):
     class Meta(TableMeta):
         comment = "Core user accounts"
         indexes = [
+            # Named indexes produce "CREATE INDEX IF NOT EXISTS ..."
+            # in PostgreSQL output (SQLite omits these in DDL).
             IndexSpec(name="ix_users_created_at", columns=["created_at"]),
         ]
 
@@ -31,6 +45,9 @@ class Post(Base):
     id = Column(Integer, primary_key=True)
     title = Column(String(255), nullable=False)
     body = Column(Text, nullable=False)
+    # ForeignKey("users.id") generates a REFERENCES clause in the
+    # CREATE TABLE statement.  DBWarden renders it inline for SQLite
+    # and as a table-level FOREIGN KEY constraint for PostgreSQL.
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, server_default=text("CURRENT_TIMESTAMP"))
 
@@ -54,6 +71,8 @@ class Product(Base):
 
     class Meta(TableMeta):
         comment = "Product catalog"
+        # CHECK constraints defined in Meta.checks are rendered inline
+        # for SQLite and as CONSTRAINT ... CHECK (...) for PostgreSQL.
         checks = [
             {"name": "ck_products_price_positive", "sql": "price > 0"},
         ]

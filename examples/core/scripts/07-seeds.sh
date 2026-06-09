@@ -3,15 +3,29 @@ set -euo pipefail
 
 echo "=== 07: Seeds ==="
 
-# Ensure migrations are applied
+# ── Seeds overview ─────────────────────────────────────────────
+# Seeds are versioned, idempotent data insertions tracked in a
+# _dbwarden_seeds table alongside migrations.  Unlike migrations,
+# which manage schema, seeds manage reference data (countries,
+# roles, admin accounts) that must exist in every environment.
+#
+# Seeds can be:
+#   - SQL files (seeds/V*.sql) — plain INSERT statements
+#   - Python files — run arbitrary logic
+#   - @seed_data decorators — inline in model files
+
+# Ensure migrations are applied (tables must exist before seeding)
 mkdir -p seeds
 dbwarden migrate --database primary 2>/dev/null || true
 
-# Create a SQL seed file
+# ── dbwarden seed create ───────────────────────────────────────
+# Creates a blank seed file in the seeds/ directory with a
+# sequential version prefix (V0001__, V0002__, ...).  The seed
+# file has the same --upgrade / --rollback structure as a migration.
 echo "--- Creating SQL seed ---"
 dbwarden seed create "initial admin users" --database primary
 
-# Populate the seed file with content
+# Populate the seed file with SQL content
 SEED_FILE=$(ls seeds/V*.sql 2>/dev/null | head -1)
 if [ -n "$SEED_FILE" ]; then
     cat > "$SEED_FILE" << 'SEEDEOF'
@@ -27,17 +41,24 @@ SEEDEOF
     echo "Seed file written: $SEED_FILE"
 fi
 
-# Apply seeds
+# ── dbwarden seed apply ────────────────────────────────────────
+# Applies all pending seeds (those not yet recorded in
+# _dbwarden_seeds).  Each seed is executed in a transaction
+# and its checksum is recorded.  Re-running applies only new
+# or changed seeds — already-applied seeds are skipped.
 echo ""
 echo "--- Applying seeds ---"
 dbwarden seed apply --database primary
 
-# List applied seeds
+# ── dbwarden seed list ─────────────────────────────────────────
+# Lists all applied seeds with their version, description,
+# filename, and applied_at timestamp.  Useful for verifying
+# which seed data is present in a given environment.
 echo ""
 echo "--- Applied seeds ---"
 dbwarden seed list --database primary
 
-# Create another seed
+# Create a second seed to demonstrate version tracking
 echo ""
 echo "--- Creating second seed ---"
 dbwarden seed create "demo products" --database primary
@@ -67,7 +88,11 @@ echo ""
 echo "--- All seeds after applying second ---"
 dbwarden seed list --database primary
 
-# Rollback the last seed
+# ── dbwarden seed rollback ─────────────────────────────────────
+# Reverts the last N applied seeds by executing their --rollback
+# sections.  Seeds are tracked with checksums, so re-applying a
+# rolled-back seed re-runs it fresh (the checksum changed after
+# rollback).
 echo ""
 echo "--- Rolling back last seed ---"
 dbwarden seed rollback --database primary --count 1

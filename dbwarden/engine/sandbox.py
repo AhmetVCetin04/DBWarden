@@ -108,7 +108,7 @@ class ClickHouseTestcontainersProvider(_TestcontainersProvider):
     def _build_url(self) -> str:
         port = self._container.get_exposed_port(8123)
         host = self._container.get_container_host_ip()
-        return f"clickhousedb://default:@:{port}/default"
+        return f"clickhousedb://default:@{host}:{port}/default"
 
 
 class PostgresTestcontainersProvider(_TestcontainersProvider):
