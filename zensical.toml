@@ -84,20 +84,26 @@ name = "DBWarden on PyPI"
   {"Applying Migrations" = "tutorial/applying-migrations.md"},
   {"Rolling Back" = "tutorial/rolling-back.md"},
   {"Dev Mode" = "tutorial/dev-mode.md"},
-  {"Multi-Database Setup" = "tutorial/multi-database-setup.md"}
+  {"Multi-Database Setup" = "tutorial/multi-database-setup.md"},
+  {Modeling = "tutorial/modeling.md"}
 ]
 
 [[project.nav]]
-"Concepts" = [
+Concepts = [
   {"Migration Files" = "migration-files.md"},
   {"SQLAlchemy Models" = "models.md"},
   {Seeds = "seeds.md"},
   {"SQL Translation" = "sql-translation.md"},
   {Observability = "observability.md"},
-  {"Supported Databases" = "databases.md"},
-  {"PostgreSQL / MySQL / SQLite" = "databases/sql-databases.md"},
-  {ClickHouse = "databases/clickhouse.md"},
   {Architecture = "architecture-deep-dive.md"}
+]
+
+[[project.nav]]
+Databases = [
+  {Overview = "databases.md"},
+  {"Common SQL Databases" = "databases/sql-databases.md"},
+  {PostgreSQL = "databases/postgresql.md"},
+  {ClickHouse = "databases/clickhouse.md"}
 ]
 
 [[project.nav]]
