@@ -1,35 +1,31 @@
 ---
 seo:
   title: Credentials and Secrets - DBWarden Documentation
-  description: 'Credentials and Secrets Never hardcode database credentials in dbwarden.py.
-    This page covers how to inject secrets safely. The problem The quickstart examples
-    show inline connection strings: python...'
+  description: Never hardcode database credentials in dbwarden.py. This page covers
+    how to inject secrets safely.
   canonical: https://emiliano-gandini-outeda.github.io/DBWarden/configuration/credentials/
   robots: index,follow
   og:
     type: website
     title: Credentials and Secrets - DBWarden Documentation
-    description: 'Credentials and Secrets Never hardcode database credentials in dbwarden.py.
-      This page covers how to inject secrets safely. The problem The quickstart examples
-      show inline connection strings: python...'
+    description: Never hardcode database credentials in dbwarden.py. This page covers
+      how to inject secrets safely.
     url: https://emiliano-gandini-outeda.github.io/DBWarden/configuration/credentials/
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: Credentials and Secrets - DBWarden Documentation
-    description: 'Credentials and Secrets Never hardcode database credentials in dbwarden.py.
-      This page covers how to inject secrets safely. The problem The quickstart examples
-      show inline connection strings: python...'
+    description: Never hardcode database credentials in dbwarden.py. This page covers
+      how to inject secrets safely.
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: Credentials and Secrets - DBWarden Documentation
     url: https://emiliano-gandini-outeda.github.io/DBWarden/configuration/credentials/
-    description: 'Credentials and Secrets Never hardcode database credentials in dbwarden.py.
-      This page covers how to inject secrets safely. The problem The quickstart examples
-      show inline connection strings: python...'
+    description: Never hardcode database credentials in dbwarden.py. This page covers
+      how to inject secrets safely.
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
     publisher:
       '@type': Organization

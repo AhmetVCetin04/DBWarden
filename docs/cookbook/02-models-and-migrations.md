@@ -1,35 +1,27 @@
 ---
 seo:
   title: 2. Defining Models and Generating Migrations - DBWarden Documentation
-  description: 2. Defining Models and Generating Migrations What You'll Learn How
-    to define SQLAlchemy models with class Meta annotations How makemigrations generates
-    SQL from model changes How the generated SQL...
+  description: What You'll Learn
   canonical: https://emiliano-gandini-outeda.github.io/DBWarden/cookbook/02-models-and-migrations/
   robots: index,follow
   og:
     type: website
     title: 2. Defining Models and Generating Migrations - DBWarden Documentation
-    description: 2. Defining Models and Generating Migrations What You'll Learn How
-      to define SQLAlchemy models with class Meta annotations How makemigrations generates
-      SQL from model changes How the generated SQL...
+    description: What You'll Learn
     url: https://emiliano-gandini-outeda.github.io/DBWarden/cookbook/02-models-and-migrations/
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: 2. Defining Models and Generating Migrations - DBWarden Documentation
-    description: 2. Defining Models and Generating Migrations What You'll Learn How
-      to define SQLAlchemy models with class Meta annotations How makemigrations generates
-      SQL from model changes How the generated SQL...
+    description: What You'll Learn
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: 2. Defining Models and Generating Migrations - DBWarden Documentation
     url: https://emiliano-gandini-outeda.github.io/DBWarden/cookbook/02-models-and-migrations/
-    description: 2. Defining Models and Generating Migrations What You'll Learn How
-      to define SQLAlchemy models with class Meta annotations How makemigrations generates
-      SQL from model changes How the generated SQL...
+    description: What You'll Learn
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
     publisher:
       '@type': Organization

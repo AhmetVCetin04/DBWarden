@@ -1,35 +1,27 @@
 ---
 seo:
   title: Rolling Back - DBWarden Documentation
-  description: Rolling Back Rollback executes the rollback section of applied migration
-    files. What you'll learn how rollback selection works when to use count vs toversion
-    how to recover safely when rollback fails...
+  description: Rollback executes the -- rollback section of applied migration files.
   canonical: https://emiliano-gandini-outeda.github.io/DBWarden/tutorial/rolling-back/
   robots: index,follow
   og:
     type: website
     title: Rolling Back - DBWarden Documentation
-    description: Rolling Back Rollback executes the rollback section of applied migration
-      files. What you'll learn how rollback selection works when to use count vs toversion
-      how to recover safely when rollback fails...
+    description: Rollback executes the -- rollback section of applied migration files.
     url: https://emiliano-gandini-outeda.github.io/DBWarden/tutorial/rolling-back/
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: Rolling Back - DBWarden Documentation
-    description: Rolling Back Rollback executes the rollback section of applied migration
-      files. What you'll learn how rollback selection works when to use count vs toversion
-      how to recover safely when rollback fails...
+    description: Rollback executes the -- rollback section of applied migration files.
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: Rolling Back - DBWarden Documentation
     url: https://emiliano-gandini-outeda.github.io/DBWarden/tutorial/rolling-back/
-    description: Rolling Back Rollback executes the rollback section of applied migration
-      files. What you'll learn how rollback selection works when to use count vs toversion
-      how to recover safely when rollback fails...
+    description: Rollback executes the -- rollback section of applied migration files.
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
     publisher:
       '@type': Organization

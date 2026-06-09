@@ -1,35 +1,27 @@
 ---
 seo:
-  title: '`check-db` - DBWarden Documentation'
-  description: checkdb Inspect live database schema. Usage bash dbwarden checkdb database
-    primary dbwarden checkdb database primary out json dbwarden checkdb database primary
-    out yaml Options database, d out, o...
+  title: check-db - DBWarden Documentation
+  description: Inspect live database schema.
   canonical: https://emiliano-gandini-outeda.github.io/DBWarden/commands/check-db/
   robots: index,follow
   og:
     type: website
-    title: '`check-db` - DBWarden Documentation'
-    description: checkdb Inspect live database schema. Usage bash dbwarden checkdb
-      database primary dbwarden checkdb database primary out json dbwarden checkdb
-      database primary out yaml Options database, d out, o...
+    title: check-db - DBWarden Documentation
+    description: Inspect live database schema.
     url: https://emiliano-gandini-outeda.github.io/DBWarden/commands/check-db/
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
-    title: '`check-db` - DBWarden Documentation'
-    description: checkdb Inspect live database schema. Usage bash dbwarden checkdb
-      database primary dbwarden checkdb database primary out json dbwarden checkdb
-      database primary out yaml Options database, d out, o...
+    title: check-db - DBWarden Documentation
+    description: Inspect live database schema.
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
-    name: '`check-db` - DBWarden Documentation'
+    name: check-db - DBWarden Documentation
     url: https://emiliano-gandini-outeda.github.io/DBWarden/commands/check-db/
-    description: checkdb Inspect live database schema. Usage bash dbwarden checkdb
-      database primary dbwarden checkdb database primary out json dbwarden checkdb
-      database primary out yaml Options database, d out, o...
+    description: Inspect live database schema.
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
     publisher:
       '@type': Organization

@@ -1,35 +1,27 @@
 ---
 seo:
   title: Troubleshooting - DBWarden Documentation
-  description: 'Troubleshooting Solutions to common configuration issues. "No configuration
-    found" Symptom DBWardenConfigError: No configuration found Causes & Solutions
-    Cause 1: No dbwarden.py file bash Check if...'
+  description: Solutions to common configuration issues.
   canonical: https://emiliano-gandini-outeda.github.io/DBWarden/configuration/troubleshooting/
   robots: index,follow
   og:
     type: website
     title: Troubleshooting - DBWarden Documentation
-    description: 'Troubleshooting Solutions to common configuration issues. "No configuration
-      found" Symptom DBWardenConfigError: No configuration found Causes & Solutions
-      Cause 1: No dbwarden.py file bash Check if...'
+    description: Solutions to common configuration issues.
     url: https://emiliano-gandini-outeda.github.io/DBWarden/configuration/troubleshooting/
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: Troubleshooting - DBWarden Documentation
-    description: 'Troubleshooting Solutions to common configuration issues. "No configuration
-      found" Symptom DBWardenConfigError: No configuration found Causes & Solutions
-      Cause 1: No dbwarden.py file bash Check if...'
+    description: Solutions to common configuration issues.
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: Troubleshooting - DBWarden Documentation
     url: https://emiliano-gandini-outeda.github.io/DBWarden/configuration/troubleshooting/
-    description: 'Troubleshooting Solutions to common configuration issues. "No configuration
-      found" Symptom DBWardenConfigError: No configuration found Causes & Solutions
-      Cause 1: No dbwarden.py file bash Check if...'
+    description: Solutions to common configuration issues.
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
     publisher:
       '@type': Organization

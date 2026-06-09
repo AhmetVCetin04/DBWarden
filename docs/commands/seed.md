@@ -1,35 +1,27 @@
 ---
 seo:
-  title: '`seed` - DBWarden Documentation'
-  description: 'seed Manage seed data for a database. Subcommands seed create: create
-    a new seed file seed apply: apply pending seeds seed list: list seeds and their
-    status seed rollback: roll back applied seeds...'
+  title: seed - DBWarden Documentation
+  description: Manage seed data for a database.
   canonical: https://emiliano-gandini-outeda.github.io/DBWarden/commands/seed/
   robots: index,follow
   og:
     type: website
-    title: '`seed` - DBWarden Documentation'
-    description: 'seed Manage seed data for a database. Subcommands seed create: create
-      a new seed file seed apply: apply pending seeds seed list: list seeds and their
-      status seed rollback: roll back applied seeds...'
+    title: seed - DBWarden Documentation
+    description: Manage seed data for a database.
     url: https://emiliano-gandini-outeda.github.io/DBWarden/commands/seed/
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
-    title: '`seed` - DBWarden Documentation'
-    description: 'seed Manage seed data for a database. Subcommands seed create: create
-      a new seed file seed apply: apply pending seeds seed list: list seeds and their
-      status seed rollback: roll back applied seeds...'
+    title: seed - DBWarden Documentation
+    description: Manage seed data for a database.
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
-    name: '`seed` - DBWarden Documentation'
+    name: seed - DBWarden Documentation
     url: https://emiliano-gandini-outeda.github.io/DBWarden/commands/seed/
-    description: 'seed Manage seed data for a database. Subcommands seed create: create
-      a new seed file seed apply: apply pending seeds seed list: list seeds and their
-      status seed rollback: roll back applied seeds...'
+    description: Manage seed data for a database.
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
     publisher:
       '@type': Organization

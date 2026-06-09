@@ -1,35 +1,27 @@
 ---
 seo:
-  title: '`downgrade` - DBWarden Documentation'
-  description: downgrade Revert applied migrations to reach a specific target version.
-    Usage bash dbwarden downgrade to 0005 database primary Options to, t required
-    Target version to downgrade to database, d...
+  title: downgrade - DBWarden Documentation
+  description: Revert applied migrations to reach a specific target version.
   canonical: https://emiliano-gandini-outeda.github.io/DBWarden/commands/downgrade/
   robots: index,follow
   og:
     type: website
-    title: '`downgrade` - DBWarden Documentation'
-    description: downgrade Revert applied migrations to reach a specific target version.
-      Usage bash dbwarden downgrade to 0005 database primary Options to, t required
-      Target version to downgrade to database, d...
+    title: downgrade - DBWarden Documentation
+    description: Revert applied migrations to reach a specific target version.
     url: https://emiliano-gandini-outeda.github.io/DBWarden/commands/downgrade/
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
-    title: '`downgrade` - DBWarden Documentation'
-    description: downgrade Revert applied migrations to reach a specific target version.
-      Usage bash dbwarden downgrade to 0005 database primary Options to, t required
-      Target version to downgrade to database, d...
+    title: downgrade - DBWarden Documentation
+    description: Revert applied migrations to reach a specific target version.
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
-    name: '`downgrade` - DBWarden Documentation'
+    name: downgrade - DBWarden Documentation
     url: https://emiliano-gandini-outeda.github.io/DBWarden/commands/downgrade/
-    description: downgrade Revert applied migrations to reach a specific target version.
-      Usage bash dbwarden downgrade to 0005 database primary Options to, t required
-      Target version to downgrade to database, d...
+    description: Revert applied migrations to reach a specific target version.
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
     publisher:
       '@type': Organization

@@ -1,35 +1,31 @@
 ---
 seo:
   title: Architecture - DBWarden Documentation
-  description: Architecture This page explains DBWarden internals for contributors
-    and advanced debugging. Layered architecture text CLI Typer Commands layer Engine
-    layer planning/parsing/version/checksum/model...
+  description: This page explains DBWarden internals for contributors and advanced
+    debugging.
   canonical: https://emiliano-gandini-outeda.github.io/DBWarden/architecture-deep-dive/
   robots: index,follow
   og:
     type: website
     title: Architecture - DBWarden Documentation
-    description: Architecture This page explains DBWarden internals for contributors
-      and advanced debugging. Layered architecture text CLI Typer Commands layer Engine
-      layer planning/parsing/version/checksum/model...
+    description: This page explains DBWarden internals for contributors and advanced
+      debugging.
     url: https://emiliano-gandini-outeda.github.io/DBWarden/architecture-deep-dive/
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: Architecture - DBWarden Documentation
-    description: Architecture This page explains DBWarden internals for contributors
-      and advanced debugging. Layered architecture text CLI Typer Commands layer Engine
-      layer planning/parsing/version/checksum/model...
+    description: This page explains DBWarden internals for contributors and advanced
+      debugging.
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: Architecture - DBWarden Documentation
     url: https://emiliano-gandini-outeda.github.io/DBWarden/architecture-deep-dive/
-    description: Architecture This page explains DBWarden internals for contributors
-      and advanced debugging. Layered architecture text CLI Typer Commands layer Engine
-      layer planning/parsing/version/checksum/model...
+    description: This page explains DBWarden internals for contributors and advanced
+      debugging.
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
     publisher:
       '@type': Organization

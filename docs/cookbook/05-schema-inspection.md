@@ -1,35 +1,27 @@
 ---
 seo:
   title: 5. Schema Inspection - DBWarden Documentation
-  description: 5. Schema Inspection What You'll Learn How to diff models against the
-    live database How to capture DDL snapshots of individual tables How to reverseengineer
-    models from a live database Prerequisites...
+  description: What You'll Learn
   canonical: https://emiliano-gandini-outeda.github.io/DBWarden/cookbook/05-schema-inspection/
   robots: index,follow
   og:
     type: website
     title: 5. Schema Inspection - DBWarden Documentation
-    description: 5. Schema Inspection What You'll Learn How to diff models against
-      the live database How to capture DDL snapshots of individual tables How to reverseengineer
-      models from a live database Prerequisites...
+    description: What You'll Learn
     url: https://emiliano-gandini-outeda.github.io/DBWarden/cookbook/05-schema-inspection/
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: 5. Schema Inspection - DBWarden Documentation
-    description: 5. Schema Inspection What You'll Learn How to diff models against
-      the live database How to capture DDL snapshots of individual tables How to reverseengineer
-      models from a live database Prerequisites...
+    description: What You'll Learn
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: 5. Schema Inspection - DBWarden Documentation
     url: https://emiliano-gandini-outeda.github.io/DBWarden/cookbook/05-schema-inspection/
-    description: 5. Schema Inspection What You'll Learn How to diff models against
-      the live database How to capture DDL snapshots of individual tables How to reverseengineer
-      models from a live database Prerequisites...
+    description: What You'll Learn
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
     publisher:
       '@type': Organization

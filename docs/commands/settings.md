@@ -1,35 +1,35 @@
 ---
 seo:
-  title: '`settings` - DBWarden Documentation'
-  description: settings View DBWarden configuration. All database settings are defined
-    in Python code via databaseconfig, so settings show is a readonly command for
-    inspecting the current configuration. settings...
+  title: settings - DBWarden Documentation
+  description: View DBWarden configuration. All database settings are defined in Python
+    code via databaseconfig, so settings show is a read-only command for inspecting
+    the...
   canonical: https://emiliano-gandini-outeda.github.io/DBWarden/commands/settings/
   robots: index,follow
   og:
     type: website
-    title: '`settings` - DBWarden Documentation'
-    description: settings View DBWarden configuration. All database settings are defined
-      in Python code via databaseconfig, so settings show is a readonly command for
-      inspecting the current configuration. settings...
+    title: settings - DBWarden Documentation
+    description: View DBWarden configuration. All database settings are defined in
+      Python code via databaseconfig, so settings show is a read-only command for
+      inspecting the...
     url: https://emiliano-gandini-outeda.github.io/DBWarden/commands/settings/
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
-    title: '`settings` - DBWarden Documentation'
-    description: settings View DBWarden configuration. All database settings are defined
-      in Python code via databaseconfig, so settings show is a readonly command for
-      inspecting the current configuration. settings...
+    title: settings - DBWarden Documentation
+    description: View DBWarden configuration. All database settings are defined in
+      Python code via databaseconfig, so settings show is a read-only command for
+      inspecting the...
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
-    name: '`settings` - DBWarden Documentation'
+    name: settings - DBWarden Documentation
     url: https://emiliano-gandini-outeda.github.io/DBWarden/commands/settings/
-    description: settings View DBWarden configuration. All database settings are defined
-      in Python code via databaseconfig, so settings show is a readonly command for
-      inspecting the current configuration. settings...
+    description: View DBWarden configuration. All database settings are defined in
+      Python code via databaseconfig, so settings show is a read-only command for
+      inspecting the...
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
     publisher:
       '@type': Organization

@@ -1,35 +1,27 @@
 ---
 seo:
   title: Supported Databases - DBWarden Documentation
-  description: Supported Databases DBWarden supports PostgreSQL, MySQL, MariaDB, SQLite,
-    and ClickHouse. Backend Matrix Backend databasetype Typical URL PostgreSQL postgresql
-    postgresql://user:pass@host:5432/db...
+  description: DBWarden supports PostgreSQL, MySQL, MariaDB, SQLite, and ClickHouse.
   canonical: https://emiliano-gandini-outeda.github.io/DBWarden/databases/
   robots: index,follow
   og:
     type: website
     title: Supported Databases - DBWarden Documentation
-    description: Supported Databases DBWarden supports PostgreSQL, MySQL, MariaDB,
-      SQLite, and ClickHouse. Backend Matrix Backend databasetype Typical URL PostgreSQL
-      postgresql postgresql://user:pass@host:5432/db...
+    description: DBWarden supports PostgreSQL, MySQL, MariaDB, SQLite, and ClickHouse.
     url: https://emiliano-gandini-outeda.github.io/DBWarden/databases/
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: Supported Databases - DBWarden Documentation
-    description: Supported Databases DBWarden supports PostgreSQL, MySQL, MariaDB,
-      SQLite, and ClickHouse. Backend Matrix Backend databasetype Typical URL PostgreSQL
-      postgresql postgresql://user:pass@host:5432/db...
+    description: DBWarden supports PostgreSQL, MySQL, MariaDB, SQLite, and ClickHouse.
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: Supported Databases - DBWarden Documentation
     url: https://emiliano-gandini-outeda.github.io/DBWarden/databases/
-    description: Supported Databases DBWarden supports PostgreSQL, MySQL, MariaDB,
-      SQLite, and ClickHouse. Backend Matrix Backend databasetype Typical URL PostgreSQL
-      postgresql postgresql://user:pass@host:5432/db...
+    description: DBWarden supports PostgreSQL, MySQL, MariaDB, SQLite, and ClickHouse.
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
     publisher:
       '@type': Organization

@@ -180,26 +180,34 @@ def _build_alter_type_sql(
     column: str,
     new_type: str,
     backend: str,
+    old_type: str = "",
 ) -> tuple[str, str]:
+    if old_type:
+        rollback_type = old_type
+        rollback_comment = ""
+    else:
+        rollback_type = "<original_type>"
+        rollback_comment = "-- "
+
     if backend == "postgresql":
         upgrade = f"ALTER TABLE {table} ALTER COLUMN {column} TYPE {new_type}"
-        rollback = f"-- ALTER TABLE {table} ALTER COLUMN {column} TYPE <original_type>"
+        rollback = f"{rollback_comment}ALTER TABLE {table} ALTER COLUMN {column} TYPE {rollback_type}"
     elif backend in ("mysql", "mariadb"):
         upgrade = f"ALTER TABLE {table} MODIFY COLUMN {column} {new_type}"
-        rollback = f"-- ALTER TABLE {table} MODIFY COLUMN {column} <original_type>"
+        rollback = f"{rollback_comment}ALTER TABLE {table} MODIFY COLUMN {column} {rollback_type}"
     elif backend == "sqlite":
         upgrade = (
             f"-- SQLite does not support ALTER COLUMN TYPE.\n"
             f"-- Use 'dbwarden new' to write a manual migration for:\n"
             f"-- ALTER TABLE {table} ALTER COLUMN {column} TYPE {new_type}"
         )
-        rollback = f"-- ALTER TABLE {table} ALTER COLUMN {column} TYPE <original_type>"
+        rollback = f"{rollback_comment}ALTER TABLE {table} ALTER COLUMN {column} TYPE {rollback_type}"
     elif backend == "clickhouse":
         upgrade = f"ALTER TABLE {table} MODIFY COLUMN {column} {new_type}"
-        rollback = f"-- ALTER TABLE {table} MODIFY COLUMN {column} <original_type>"
+        rollback = f"{rollback_comment}ALTER TABLE {table} MODIFY COLUMN {column} {rollback_type}"
     else:
         upgrade = f"ALTER TABLE {table} ALTER COLUMN {column} TYPE {new_type}"
-        rollback = f"-- ALTER TABLE {table} ALTER COLUMN {column} TYPE <original_type>"
+        rollback = f"{rollback_comment}ALTER TABLE {table} ALTER COLUMN {column} TYPE {rollback_type}"
     return upgrade, rollback
 
 
@@ -2291,7 +2299,7 @@ def snapshot_diff_to_sql(
             statements.append(MigrationStatement(
                 order=StatementOrder.DROP_TABLE,
                 upgrade_sql=generate_drop_object_sql(drop_table),
-                rollback_sql=f"CREATE TABLE {op['table']} (/* restore from snapshot */)",
+                rollback_sql=f"CREATE TABLE {op['table']} (/* see .dbwarden/schemas/ for DDL */)",
             ))
             changes.append(Change(operation="drop_table", table=op["table"]))
         elif op["type"] == "rename_column":
@@ -2338,7 +2346,7 @@ def snapshot_diff_to_sql(
                     statements.append(s)
                 changes.append(Change(operation="alter_column_type", table=op["table"], target=op["column"]))
             else:
-                alter_up, alter_rb = _build_alter_type_sql(op["table"], op["column"], model_type, backend)
+                alter_up, alter_rb = _build_alter_type_sql(op["table"], op["column"], model_type, backend, old_type=op.get("snap_type", ""))
                 statements.append(MigrationStatement(
                     order=StatementOrder.ALTER_COLUMN_TYPE,
                     upgrade_sql=alter_up,

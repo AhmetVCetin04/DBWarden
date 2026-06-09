@@ -1,35 +1,31 @@
 ---
 seo:
   title: Observability - DBWarden Documentation
-  description: 'Observability DBWarden provides Prometheus metrics and structured
-    JSON logging for monitoring and debugging. Prometheus metrics Installation Install
-    the optional metrics dependency: bash pip install...'
+  description: DBWarden provides Prometheus metrics and structured JSON logging for
+    monitoring and debugging.
   canonical: https://emiliano-gandini-outeda.github.io/DBWarden/observability/
   robots: index,follow
   og:
     type: website
     title: Observability - DBWarden Documentation
-    description: 'Observability DBWarden provides Prometheus metrics and structured
-      JSON logging for monitoring and debugging. Prometheus metrics Installation Install
-      the optional metrics dependency: bash pip install...'
+    description: DBWarden provides Prometheus metrics and structured JSON logging
+      for monitoring and debugging.
     url: https://emiliano-gandini-outeda.github.io/DBWarden/observability/
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: Observability - DBWarden Documentation
-    description: 'Observability DBWarden provides Prometheus metrics and structured
-      JSON logging for monitoring and debugging. Prometheus metrics Installation Install
-      the optional metrics dependency: bash pip install...'
+    description: DBWarden provides Prometheus metrics and structured JSON logging
+      for monitoring and debugging.
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: Observability - DBWarden Documentation
     url: https://emiliano-gandini-outeda.github.io/DBWarden/observability/
-    description: 'Observability DBWarden provides Prometheus metrics and structured
-      JSON logging for monitoring and debugging. Prometheus metrics Installation Install
-      the optional metrics dependency: bash pip install...'
+    description: DBWarden provides Prometheus metrics and structured JSON logging
+      for monitoring and debugging.
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
     publisher:
       '@type': Organization

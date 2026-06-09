@@ -62,7 +62,11 @@ def route_path_from_file(filepath: Path) -> str:
 
 def first_heading(text: str) -> str | None:
     match = re.search(r"^#\s+(.+)", text, re.MULTILINE)
-    return match.group(1).strip() if match else None
+    if not match:
+        return None
+    title = match.group(1).strip()
+    title = re.sub(r"[`*_]", "", title)
+    return title
 
 
 def strip_frontmatter(text: str) -> str:
@@ -73,8 +77,13 @@ def strip_frontmatter(text: str) -> str:
     return text
 
 
-def extract_excerpt(body: str, max_chars: int = 200) -> str:
-    clean = re.sub(r"[#*`_\[\]()>|{}-]", "", body)
+def extract_excerpt(body: str, max_chars: int = 160) -> str:
+    # Strip the first heading (page title) since it's redundant in descriptions
+    body = re.sub(r"^#\s+.*\n?", "", body, count=1).strip()
+    # Take the first paragraph
+    para = re.split(r"\n\s*\n", body, maxsplit=1)[0].strip()
+    # Clean markdown syntax
+    clean = re.sub(r"[`*_\[\]()>|#{}]", "", para)
     clean = re.sub(r"\s+", " ", clean).strip()
     if not clean:
         return ""
