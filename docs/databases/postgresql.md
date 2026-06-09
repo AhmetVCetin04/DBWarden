@@ -71,6 +71,7 @@ The following PostgreSQL features are fully supported in this round-trip:
 | Enum Types | `CREATE TYPE ... AS ENUM`, `ALTER TYPE ... ADD VALUE ... AFTER ...` |
 | Comments | Table and column `COMMENT ON` |
 | Type Normalization | `SERIAL` → `integer` + autoincrement, `TIMESTAMPTZ`, `NUMERIC(p,s)`, `VARCHAR(n)`, `DOUBLE PRECISION`, `REAL`, `JSONB`, `UUID`, `ARRAY`, `ENUM`, `TSTZRANGE` |
+| Auto-increment Lifecycle | Toggle autoincrement on integer PKs via `autoincrement` field — generates `CREATE SEQUENCE` / `DROP SEQUENCE` + `SET DEFAULT nextval` |
 
 ## Declaring Metadata
 
@@ -217,6 +218,73 @@ The `--safe-type-change` flag generates a multi-step strategy:
 ### Generated Columns
 
 Adding a generated column via `ALTER TABLE` is not supported by PostgreSQL. `ALTER COLUMN column_name ADD GENERATED AS (expr) STORED` is not valid DDL. DBWarden emits a comment placeholder noting this limitation. Dropping the generation expression (`ALTER COLUMN c DROP EXPRESSION`) produces real DDL.
+
+### Auto-increment Lifecycle
+
+DBWarden supports toggling auto-increment on integer primary key columns. The `autoincrement` field in your model controls whether a column uses SERIAL-style sequence auto-increment or is a plain integer:
+
+```python
+class User(Base):
+    __tablename__ = "users"
+
+    # Autoincrement enabled (SERIAL) — same as default behavior
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    class Meta(PGTableMeta):
+        id = ColumnMeta(autoincrement=True)
+```
+
+To explicitly disable auto-increment on a PK column:
+
+```python
+class User(Base):
+    __tablename__ = "users"
+
+    # Plain integer PK — no sequence, no auto-increment
+    id = Column(Integer, primary_key=True, autoincrement=False)
+```
+
+**What happens when autoincrement changes:**
+
+| Change | Generated SQL |
+|--------|---------------|
+| Adding autoincrement | `CREATE SEQUENCE users_id_seq` + `ALTER COLUMN id SET DEFAULT nextval('users_id_seq')` + `ALTER SEQUENCE users_id_seq OWNED BY users.id` |
+| Removing autoincrement | `ALTER COLUMN id DROP DEFAULT` + `DROP SEQUENCE IF EXISTS users_id_seq` |
+
+The rollback SQL is the symmetric inverse — if an autoincrement addition is rolled back, the sequence is dropped and the default is removed.
+
+**Detection from live databases:**
+
+When reverse-engineering a live PostgreSQL database, DBWarden detects autoincrement by:
+1. SERIAL/BIGSERIAL column types — type string contains `serial`
+2. SQLAlchemy's `.autoincrement` attribute — set by the PG dialect for SERIAL columns
+3. `nextval(...)` default patterns — PG SERIAL columns have `DEFAULT nextval('table_col_seq'::regclass)`
+
+**Sequence lifecycle:**
+
+Sequences created by SERIAL auto-increment follow the naming convention `table_column_seq`. When autoincrement is removed:
+- The column default (`nextval(...)`) is dropped
+- The sequence is dropped via `DROP SEQUENCE IF EXISTS`
+- The column type remains `INTEGER` — no data is lost
+
+When autoincrement is added to an existing integer column:
+- A new sequence is created starting at 1
+- The column default is set to `nextval('table_column_seq')`
+- The sequence is owned by the column for proper cleanup on table drop
+
+**Type mapping behavior:**
+
+The type mapping in `_map_sqlalchemy_type_to_backend` promotes `INTEGER PRIMARY KEY` to `SERIAL` only when `autoincrement` is not explicitly `False`:
+
+| Condition | Resulting Type |
+|-----------|---------------|
+| `autoincrement=True` (default) | `SERIAL` / `BIGSERIAL` |
+| `autoincrement=False` | `INTEGER` / `BIGINT` |
+| `autoincrement=None` (unspecified) | `SERIAL` / `BIGSERIAL` (backward compatible) |
+
+**Non-PostgreSQL backends:**
+
+SQLite, MySQL, and ClickHouse do not support sequence-based auto-increment toggling via ALTER. The `alter_column_autoincrement` operation emits a comment explaining the limitation on these backends.
 
 ## Snapshot Format
 
