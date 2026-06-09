@@ -1,5 +1,6 @@
 import time
 
+from dbwarden.config import get_database
 from dbwarden.engine.file_parser import parse_rollback_statements
 from dbwarden.engine.version import get_migrations_directory
 from dbwarden.logging import get_logger
