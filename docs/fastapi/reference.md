@@ -271,13 +271,26 @@ async def lifespan(app: FastAPI):
 
 ## `DBWardenHealthRouter`
 
-Creates a FastAPI `APIRouter` with health endpoints.
+Creates a FastAPI `APIRouter` with health, liveness, and readiness endpoints.
 
 ### Signature
 
 ```python
-def DBWardenHealthRouter() -> APIRouter
+def DBWardenHealthRouter(
+    auth_mode: str = "open",
+    api_key: str | None = None,
+) -> APIRouter
 ```
+
+### Parameters
+
+**`auth_mode`** : `str`, optional
+- `"open"` (default) - no authentication required
+- `"authenticated"` - requires `X-API-Key` header
+- Can also be set via `DBWARDEN_HEALTH_AUTH` env var
+
+**`api_key`** : `str | None`, optional
+- API key for authenticated mode
 
 ### Returns
 
@@ -285,6 +298,8 @@ def DBWardenHealthRouter() -> APIRouter
 - Router with health endpoints configured
 - Routes:
   - `GET /` - Overall health for all databases
+  - `GET /liveness` - Always returns 200 (app is alive)
+  - `GET /readiness` - Returns 200 when all databases reachable, 503 otherwise
   - `GET /{database_name}` - Health for specific database
 
 ### Examples
@@ -297,6 +312,8 @@ app.include_router(DBWardenHealthRouter(), prefix="/health")
 
 # Now available:
 # GET /health/ - All databases
+# GET /health/liveness - Liveness probe
+# GET /health/readiness - Readiness probe
 # GET /health/primary - Specific database
 ```
 
@@ -318,6 +335,11 @@ app.include_router(DBWardenHealthRouter(), prefix="/health")
 }
 ```
 
+Liveness response:
+```python
+{"status": "alive"}
+```
+
 ### HTTP Status Codes
 
 | Scenario | Status Code |
@@ -326,6 +348,9 @@ app.include_router(DBWardenHealthRouter(), prefix="/health")
 | Degraded (pending migrations) | 200 |
 | Database unreachable | 503 |
 | Database not found | 404 (per-database route only) |
+| App is alive (liveness) | 200 |
+| Unauthenticated (auth mode) | 401 |
+| Invalid API key (auth mode) | 403 |
 
 ---
 
@@ -532,6 +557,156 @@ async def lifespan(app: FastAPI):
 ```
 
 This closes async and sync session factories, connection pools, and ClickHouse clients for all configured databases.
+
+---
+
+## `QueryTracingMiddleware`
+
+ASGI middleware that emits per-request structured query tracing logs. Tracks query count, total duration, slowest query, and slow query threshold breaches.
+
+### Signature
+
+```python
+def QueryTracingMiddleware(
+    app,
+    slow_query_threshold_ms: int = 100,
+)
+```
+
+### Usage
+
+```python
+from dbwarden.fastapi import QueryTracingMiddleware
+
+app.add_middleware(QueryTracingMiddleware, slow_query_threshold_ms=100)
+```
+
+The middleware monkey-patches SQLAlchemy's `Engine.connect` around each request to count and time queries. On each response, it logs:
+
+| Field | Description |
+|-------|-------------|
+| `path` | Request path |
+| `method` | HTTP method |
+| `request_duration_ms` | Total request time |
+| `query_count` | Number of database queries |
+| `total_query_time_ms` | Cumulative query time |
+| `slowest_query_time_ms` | Duration of the slowest query |
+| `slow_queries` | Count of queries exceeding the threshold |
+
+Slow queries are logged at `WARNING` level; normal requests at `INFO`.
+
+---
+
+## `PoolMetricsCollector`
+
+Collects SQLAlchemy connection pool metrics for monitoring.
+
+### Signature
+
+```python
+class PoolMetricsCollector()
+```
+
+### Methods
+
+**`register(name: str, engine)`** - Register an engine for metrics collection.
+
+**`collect() -> dict[str, dict[str, int]]`** - Collect pool metrics from all registered engines.
+
+### Usage
+
+```python
+from dbwarden.fastapi import PoolMetricsCollector
+from sqlalchemy import create_engine
+
+collector = PoolMetricsCollector()
+engine = create_engine("postgresql://localhost/db")
+collector.register("primary", engine)
+
+metrics = collector.collect()
+# {
+#   "primary": {
+#     "pool_size": 5,
+#     "checked_out": 2,
+#     "overflow": 0,
+#     "checked_in": 3
+#   }
+# }
+```
+
+---
+
+## `override_database`
+
+Async context manager that temporarily overrides a database URL for testing.
+
+### Signature
+
+```python
+async def override_database(
+    database: str,
+    url: str,
+    *,
+    run_migrations: bool = False,
+    verbose: bool = False,
+) -> AsyncGenerator[Any, None]
+```
+
+### Parameters
+
+**`database`** : `str` - Database name to override.
+
+**`url`** : `str` - Temporary database URL.
+
+**`run_migrations`** : `bool`, keyword-only, optional - Run pending migrations after override. Default: `False`.
+
+**`verbose`** : `bool`, keyword-only, optional - Enable verbose migration output. Default: `False`.
+
+### Usage
+
+```python
+from dbwarden.fastapi import override_database
+
+async with override_database("primary", "sqlite+aiosqlite:///:memory:",
+                             run_migrations=True):
+    # Test code here uses the overridden database
+    ...
+# Original URL is restored on exit
+```
+
+The original `sqlalchemy_url_sync` and `sqlalchemy_url_async` are restored when the context manager exits, even if an exception occurs.
+
+---
+
+## `migration_state`
+
+Async context manager that simulates a specific migration state for testing by inserting tracking records.
+
+### Signature
+
+```python
+async def migration_state(
+    applied: list[str] | None = None,
+    database: str | None = None,
+) -> AsyncGenerator[None, None]
+```
+
+### Parameters
+
+**`applied`** : `list[str] | None`, optional - List of version strings to mark as applied. Default: `None`.
+
+**`database`** : `str | None`, optional - Target database name. Default: `None` (uses default database).
+
+### Usage
+
+```python
+from dbwarden.fastapi import migration_state
+
+async with migration_state(applied=["0001", "0002"]):
+    # Database appears to have migrations 0001 and 0002 applied
+    ...
+# Tracking records are cleaned up on exit
+```
 
 ---
 
