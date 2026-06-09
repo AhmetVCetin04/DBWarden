@@ -7,9 +7,7 @@ from dbwarden.commands import (
     handle_check,
     handle_check_impact,
     handle_config,
-    handle_database_add,
     handle_database_list,
-    handle_database_remove,
     handle_diff,
     handle_downgrade,
     handle_export_models,
@@ -27,17 +25,10 @@ from dbwarden.commands import (
     handle_seed_list,
     handle_seed_rollback,
     handle_snapshot,
-    handle_squash,
     handle_status,
     handle_unlock,
     handle_version,
     handle_settings_show_command,
-    handle_settings_default_set_command,
-    handle_settings_database_add_command,
-    handle_settings_database_remove_command,
-    handle_settings_database_rename_command,
-    handle_settings_database_set_dev_command,
-    handle_settings_database_clear_dev_command,
 )
 from dbwarden.logging import get_logger
 
@@ -48,9 +39,9 @@ All commands support the --verbose / -v flag for detailed output.""",
     add_completion=False,
 )
 
-database_app = typer.Typer(help="Manage databases in warden.toml")
+database_app = typer.Typer(help="List configured databases")
 app.add_typer(database_app, name="database")
-settings_app = typer.Typer(help="Manage DBWarden Python settings")
+settings_app = typer.Typer(help="View DBWarden settings")
 app.add_typer(settings_app, name="settings")
 seed_app = typer.Typer(help="Manage seed data")
 app.add_typer(seed_app, name="seed")
@@ -90,54 +81,6 @@ def database_list():
     handle_database_list()
 
 
-@database_app.command("add")
-def database_add(
-    name: str = typer.Argument(..., help="Database name"),
-    url: str = typer.Option(..., "--url", "-u", help="SQLAlchemy database URL"),
-    database_type: str | None = typer.Option(
-        None,
-        "--type",
-        "-t",
-        help="Database type: sqlite, postgresql, mysql, mariadb, clickhouse",
-    ),
-    model_paths: list[str] | None = typer.Option(
-        None, "--model-paths", "-m", help="Model paths"
-    ),
-    migrations_dir: str | None = typer.Option(
-        None, "--migrations-dir", help="Migration directory"
-    ),
-    seed_table: str | None = typer.Option(
-        None, "--seed-table", help="Seed tracking table name",
-    ),
-    migration_table: str | None = typer.Option(
-        None, "--migration-table", help="Migration tracking table name",
-    ),
-    default: bool = typer.Option(False, "--default", help="Set as default database"),
-):
-    """Add a new database to the configuration."""
-    handle_database_add(
-        name=name,
-        url=url,
-        database_type=database_type,
-        model_paths=model_paths,
-        migrations_dir=migrations_dir,
-        seed_table=seed_table,
-        migration_table=migration_table,
-        default=default,
-    )
-
-
-@database_app.command("remove")
-def database_remove(
-    name: str = typer.Argument(..., help="Database name to remove"),
-    force: bool = typer.Option(
-        False, "--force", help="Force removal of default database"
-    ),
-):
-    """Remove a database from the configuration."""
-    handle_database_remove(name=name, force=force)
-
-
 @settings_app.command("show")
 def settings_show(
     database: str | None = typer.Argument(None, help="Database name"),
@@ -145,91 +88,6 @@ def settings_show(
 ):
     """Show current settings configuration."""
     handle_settings_show_command(database=database, all_databases=all_databases)
-
-
-@settings_app.command("default-database")
-def settings_default_database_set(
-    name: str = typer.Argument(..., help="Database name to set as default"),
-):
-    """Set default database."""
-    handle_settings_default_set_command(name)
-
-
-@settings_app.command("database-add")
-def settings_database_add(
-    name: str = typer.Argument(..., help="Database name"),
-    database_type: str = typer.Option(..., "--type", "-t", help="Database type"),
-    url: str = typer.Option(..., "--url", "-u", help="Database URL"),
-    migrations_dir: str | None = typer.Option(
-        None, "--migrations-dir", help="Migrations directory"
-    ),
-    migration_table: str | None = typer.Option(
-        None, "--migration-table", help="Migration tracking table name",
-    ),
-    seed_table: str | None = typer.Option(
-        None, "--seed-table", help="Seed tracking table name",
-    ),
-    model_paths: list[str] | None = typer.Option(
-        None, "--model-path", help="Model path (repeatable)"
-    ),
-    dev_type: str | None = typer.Option(None, "--dev-type", help="Dev database type"),
-    dev_url: str | None = typer.Option(None, "--dev-url", help="Dev database URL"),
-    overlap_models: bool = typer.Option(
-        False,
-        "--overlap-models",
-        help="Allow model path overlap with other databases",
-    ),
-    default: bool = typer.Option(False, "--default", help="Set as default database"),
-):
-    """Add database settings entry."""
-    handle_settings_database_add_command(
-        name=name,
-        database_type=database_type,
-        url=url,
-        migrations_dir=migrations_dir,
-        migration_table=migration_table,
-        seed_table=seed_table,
-        model_paths=model_paths,
-        dev_type=dev_type,
-        dev_url=dev_url,
-        overlap_models=overlap_models,
-        default=default,
-    )
-
-
-@settings_app.command("database-remove")
-def settings_database_remove(
-    name: str = typer.Argument(..., help="Database name"),
-):
-    """Remove database settings entry."""
-    handle_settings_database_remove_command(name)
-
-
-@settings_app.command("database-rename")
-def settings_database_rename(
-    old: str = typer.Argument(..., help="Current database name"),
-    new: str = typer.Argument(..., help="New database name"),
-):
-    """Rename database entry."""
-    handle_settings_database_rename_command(old, new)
-
-
-@settings_app.command("database-set-dev")
-def settings_database_set_dev(
-    name: str = typer.Argument(..., help="Database name"),
-    dev_type: str = typer.Option(..., "--type", help="Dev database type"),
-    dev_url: str = typer.Option(..., "--url", help="Dev database URL"),
-):
-    """Set development database settings."""
-    handle_settings_database_set_dev_command(name, dev_type, dev_url)
-
-
-@settings_app.command("database-clear-dev")
-def settings_database_clear_dev(
-    name: str = typer.Argument(..., help="Database name"),
-):
-    """Clear development database settings."""
-    handle_settings_database_clear_dev_command(name)
 
 
 @app.command()
@@ -569,8 +427,8 @@ def check_impact(
 
 @app.command()
 def diff(
-    diff_type: str = typer.Argument(
-        "all", help="Type of diff (models, migrations, all)"
+    output: str = typer.Option(
+        "table", "--out", "-o", help="Output format: table (default), json, sql"
     ),
     verbose: bool = typer.Option(
         False, "--verbose", "-v", help="Enable verbose logging"
@@ -578,24 +436,17 @@ def diff(
     database: str | None = typer.Option(
         None, "--database", "-d", help="Target database name"
     ),
-):
-    """Show structural differences between models and database."""
-    validate_directory()
-    handle_diff(diff_type=diff_type, verbose=verbose, database=database)
-
-
-@app.command()
-def squash(
-    verbose: bool = typer.Option(
-        False, "--verbose", "-v", help="Enable verbose logging"
-    ),
-    database: str | None = typer.Option(
-        None, "--database", "-d", help="Target database name"
+    offline: bool = typer.Option(
+        False,
+        "--offline",
+        help="Use model state file instead of live database snapshot",
     ),
 ):
-    """Merge multiple consecutive migrations into one."""
+    """Show structural differences between models and database (read-only, no files written)."""
     validate_directory()
-    handle_squash(verbose=verbose, database=database)
+    handle_diff(
+        output_format=output, verbose=verbose, database=database, offline=offline
+    )
 
 
 @app.command()

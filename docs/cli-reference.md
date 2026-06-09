@@ -11,20 +11,12 @@ dbwarden [GLOBAL_OPTIONS] COMMAND [ARGS] [COMMAND_OPTIONS]
 ## Global options
 
 | Option | Description |
-|---|---|---|
+|---|---|
 | `--dev` | Use `dev_database_url` and `dev_database_type` for selected database |
 | `--strict-translation` | Fail on unsupported/lossy dev SQLite translation |
-| `--verbose` | Enable detailed logging output |
 | `--help` | Show help |
 
-## Setup and configuration
-
-### `init`
-
-```bash
-dbwarden init
-dbwarden init --database primary
-```
+## Configuration
 
 ### `settings show`
 
@@ -34,54 +26,10 @@ dbwarden settings show primary
 dbwarden settings show --all
 ```
 
-### `settings default-database`
+### `database list`
 
 ```bash
-dbwarden settings default-database primary
-```
-
-### `settings database-add`
-
-```bash
-dbwarden settings database-add analytics \
-  --type clickhouse \
-  --url "http://user:pass@localhost:8123/analytics" \
-  --model-path app.models.analytics
-```
-
-Options:
-
-- `--type`
-- `--url`
-- `--migrations-dir`
-- `--model-path` (repeatable)
-- `--dev-type`
-- `--dev-url`
-- `--overlap-models`
-- `--default`
-
-### `settings database-remove`
-
-```bash
-dbwarden settings database-remove analytics
-```
-
-### `settings database-rename`
-
-```bash
-dbwarden settings database-rename primary main
-```
-
-### `settings database-set-dev`
-
-```bash
-dbwarden settings database-set-dev primary --type sqlite --url "sqlite:///./development.db"
-```
-
-### `settings database-clear-dev`
-
-```bash
-dbwarden settings database-clear-dev primary
+dbwarden database list
 ```
 
 ## Migration authoring
@@ -124,7 +72,7 @@ Options: `--database`, `--version`, `--type`/`-t`
 
 ```bash
 dbwarden generate-models --output ./models/ --database primary
-dbwarden generate-models --output ./models/ --database primary --single-file
+dbwarden generate-models --database primary --single-file
 dbwarden generate-models --database primary --tables users,posts
 dbwarden generate-models --database primary --exclude-tables logs,audit
 ```
@@ -138,9 +86,22 @@ dbwarden export-models --database primary
 dbwarden export-models --database primary --output .dbwarden/model_state.json
 ```
 
-Exports current model definitions to a JSON state file for offline migration diffs. The generated file is consumed by `make-migrations --offline`.
+Exports current model definitions to a JSON state file for offline migration diffs.
 
 Options: `--output`/`-o` (default `.dbwarden/model_state.json`), `--database`/`-d`
+
+### `diff`
+
+```bash
+dbwarden diff --database primary
+dbwarden diff --database primary --out json
+dbwarden diff --database primary --out sql
+dbwarden diff --database primary --offline
+```
+
+Read-only model-vs-database comparison. No files are written.
+
+Options: `--database`/`-d`, `--out`/`-o` (`table`, `json`, `sql`), `--offline`, `--verbose`/`-v`
 
 ### `check-impact`
 
@@ -151,7 +112,7 @@ dbwarden check-impact 0042 --database primary --scan-path app/
 dbwarden check-impact path/to/primary__0042_add_bio.plan.json
 ```
 
-Scans your codebase for references to schema elements affected by a migration. Reads the `.plan.json` for the migration, searches `.py` files for matching table/column names, and reports files and line numbers.
+Scans your codebase for references to schema elements affected by a migration.
 
 | Option | Description |
 |--------|-------------|
@@ -161,14 +122,6 @@ Scans your codebase for references to schema elements affected by a migration. R
 | `--deep` | Enable deep introspection (imports models live) |
 | `--verbose`/`-v` | Include INFO-level operations in the scan |
 | `--database`/`-d` | Target database name |
-
-### `squash`
-
-```bash
-dbwarden squash --database primary
-```
-
-Options: `--database`, `--verbose`
 
 ## Migration execution
 
@@ -264,9 +217,10 @@ Options: `--database`, `--all`, `--verbose`
 dbwarden seed rollback --database primary
 dbwarden seed rollback --database primary --count 2
 dbwarden seed rollback --database primary --to-version 0003
+dbwarden seed rollback --all
 ```
 
-Options: `--database`, `--count`, `--to-version`, `--verbose`
+Options: `--database`, `--count`, `--to-version`, `--all`, `--verbose`
 
 ## Inspection and diagnostics
 
@@ -302,14 +256,6 @@ dbwarden check --database primary --out json
 
 Output formats: `txt`, `json`
 
-### `diff`
-
-```bash
-dbwarden diff all --database primary
-dbwarden diff models --database primary
-dbwarden diff migrations --database primary
-```
-
 ## Locking
 
 ### `lock-status`
@@ -338,19 +284,4 @@ dbwarden config
 dbwarden version
 ```
 
-## Legacy compatibility commands
-
-The `database` command group remains as a compatibility alias to `settings` flows.
-
-Examples:
-
-```bash
-dbwarden database list
-dbwarden database add analytics --type sqlite --url "sqlite:///./analytics.db"
-dbwarden database remove analytics
-```
-
-Prefer `settings` commands for new workflows.
-
 For worked command examples, see the [Cookbook & Examples](cookbook/index.md).
-

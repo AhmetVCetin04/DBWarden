@@ -1,22 +1,10 @@
 # `settings`
 
-Manage DBWarden database configuration.
-
-## Subcommands
-
-- `settings show`: display current configuration
-- `settings default-database`: set the default database
-- `settings database-add`: register a new database
-- `settings database-remove`: remove a registered database
-- `settings database-rename`: rename a registered database
-- `settings database-set-dev`: configure dev mode for a database
-- `settings database-clear-dev`: remove dev mode from a database
-
----
+View DBWarden configuration. All database settings are defined in Python code via
+`database_config()`, so `settings show` is a read-only command for inspecting
+the current configuration.
 
 ## `settings show`
-
-Display current DBWarden configuration.
 
 ### Usage
 
@@ -30,100 +18,24 @@ dbwarden settings show --all
 
 - `--all`, `-a`: show all configured databases
 
----
+### Example output
 
-## `settings default-database`
-
-Set which database is used when no `--database` flag is given.
-
-### Usage
-
-```bash
-dbwarden settings default-database primary
+```
+Database: PRIMARY (default)
+  • Default: True
+  • Type: SQLite
+  • URL: sqlite:///./app.db
+  • Migrations Directory: migrations/primary
+  • Migration Table: _dbwarden_migrations
+  • Seed Table: _dbwarden_seeds
+  • Model Paths: ['app']
+  • Dev Database Type: None
+  • Dev Database URL: None
+  • Overlap Models: False
 ```
 
----
+## See also
 
-## `settings database-add`
+- [`database list`](./database.md)
+- [Configuration docs](../configuration/index.md)
 
-Register a new database in your DBWarden configuration.
-
-### Usage
-
-```bash
-dbwarden settings database-add analytics \
-  --type clickhouse \
-  --url "http://user:pass@localhost:8123/analytics" \
-  --model-path app/models/analytics
-```
-
-### Options
-
-- `--type`: database type (`postgresql`, `sqlite`, `clickhouse`, etc.)
-- `--url` / `--database-url-sync`: sync connection URL
-- `--url-async` / `--database-url-async`: async connection URL (required for FastAPI async session support)
-- `--migrations-dir`: custom migrations directory (default: `migrations/<name>`)
-- `--migration-table`: custom migration tracking table name (default: `_dbwarden_migrations`)
-- `--model-path`: model discovery path, repeatable for multiple paths
-- `--dev-type`: database type for dev mode
-- `--dev-url`: connection URL for dev mode
-- `--overlap-models`: allow models shared with another database
-- `--seed-table`: custom seed tracking table name (default: `_dbwarden_seeds`)
-- `--default`: make this the default database
-
----
-
-## `settings database-remove`
-
-Remove a database from configuration.
-
-### Usage
-
-```bash
-dbwarden settings database-remove analytics
-```
-
----
-
-## `settings database-rename`
-
-Rename a registered database handle.
-
-### Usage
-
-```bash
-dbwarden settings database-rename primary main
-```
-
----
-
-## `settings database-set-dev`
-
-Configure dev mode for an existing database.
-
-### Usage
-
-```bash
-dbwarden settings database-set-dev primary \
-  --type sqlite \
-  --url "sqlite:///./development.db"
-```
-
-### Options
-
-- `--type`: dev database type
-- `--url`: dev connection URL
-
----
-
-## `settings database-clear-dev`
-
-Remove dev mode configuration from a database.
-
-### Usage
-
-```bash
-dbwarden settings database-clear-dev primary
-```
-
-See also: [Configuration](../configuration/index.md) | [Dev Mode](../configuration/dev-mode.md)

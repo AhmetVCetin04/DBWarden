@@ -143,7 +143,6 @@ Databases = [
   {"check-db" = "commands/check-db.md"},
   {diff = "commands/diff.md"},
   {history = "commands/history.md"},
-  {squash = "commands/squash.md"},
   {new = "commands/new.md"},
   {lock = "commands/lock.md"},
   {seed = "commands/seed.md"},

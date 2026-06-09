@@ -1,26 +1,16 @@
-# `database` (legacy compatibility)
+# `database`
 
-Legacy compatibility command group for database management.
-
-Prefer `settings` commands for new workflows.
+Display configured databases. Config is defined in Python code via `database_config()`, so
+`database list` is a read-only command for viewing what's registered.
 
 ## Usage
 
 ```bash
 dbwarden database list
-dbwarden database add <name> --url <url> --type <type>
-dbwarden database remove <name>
 ```
 
-## Compatibility mapping
+## See also
 
-- `database list` -> `settings show --all`
-- `database add` -> `settings database-add`
-- `database remove` -> `settings database-remove`
+- [`settings show`](./settings.md) — detailed view of all configuration
+- [Configuration docs](../configuration/index.md)
 
-## Notes
-
-- `database` remains available to ease migration from older workflows
-- configuration source is Python (`database_config(...)`), not TOML
-
-See also: [CLI Reference](../cli-reference.md)
