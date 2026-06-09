@@ -379,8 +379,8 @@ def _validate_ch_options(options: dict) -> None:
             raise ValueError("ch_projections must be a list")
         for proj in projections:
             if isinstance(proj, dict):
-                if not proj.get("name") or not proj.get("query"):
-                    raise ValueError("ch_projections entries require name and query")
+                if not proj.get("name"):
+                    raise ValueError("ch_projections entries require name")
             elif not hasattr(proj, "name") or not hasattr(proj, "query"):
                 raise ValueError("ch_projections entries must be ProjectionSpec or dict with name/query")
 
@@ -1068,18 +1068,21 @@ def extract_column_info(column, db_name: str | None = None) -> Optional[ModelCol
                 "ch_ttl": "ch_ttl",
                 "ch_low_cardinality": "ch_low_cardinality",
                 "ch_nullable": "ch_nullable",
+                "ch_type": "ch_type",
             }
             for info_key, meta_key in ch_key_map.items():
                 val = column.info.get(info_key)
                 if val is not None:
                     ch_meta[meta_key] = val
 
-            clickhouse_type_override = column.info.get("clickhouse_type")
-            if isinstance(clickhouse_type_override, str) and clickhouse_type_override.strip():
-                ch_type = clickhouse_type_override.strip()
-            else:
-                ch_type = _map_sa_type_to_clickhouse(column)
-            ch_meta["ch_type"] = ch_type
+            # Only set ch_type if not already set via ch_key_map above
+            if "ch_type" not in ch_meta:
+                clickhouse_type_override = column.info.get("clickhouse_type")
+                if isinstance(clickhouse_type_override, str) and clickhouse_type_override.strip():
+                    ch_type = clickhouse_type_override.strip()
+                else:
+                    ch_type = _map_sa_type_to_clickhouse(column)
+                ch_meta["ch_type"] = ch_type
 
         if column.comment:
             comment = column.comment
@@ -1194,6 +1197,7 @@ def generate_add_column_sql(
     _validate_identifier(column.name, "column_name")
     
     backend = _get_backend_name(db_name)
+    col_type = column.ch_meta.get("ch_type", column.type) if backend == "clickhouse" else column.type
     is_serial = (
         column.type.upper() in ("SERIAL", "BIGSERIAL")
         if backend == "postgresql"
@@ -1204,7 +1208,7 @@ def generate_add_column_sql(
     default_sql = f" DEFAULT {column.default}" if column.default else ""
     fk_sql = f" REFERENCES {column.foreign_key}" if column.foreign_key else ""
 
-    return f"ALTER TABLE {table_name} ADD COLUMN {column.name} {column.type} {nullable_sql}{default_sql}{fk_sql}"
+    return f"ALTER TABLE {table_name} ADD COLUMN {column.name} {col_type} {nullable_sql}{default_sql}{fk_sql}"
 
 
 def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> str:
@@ -1217,7 +1221,8 @@ def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> 
     column_defs = []
 
     for col in table.columns:
-        col_def = f"    {col.name} {col.type}"
+        col_type = col.ch_meta.get("ch_type", col.type) if backend == "clickhouse" else col.type
+        col_def = f"    {col.name} {col_type}"
         is_serial = (
             col.type.upper() in ("SERIAL", "BIGSERIAL")
             if backend == "postgresql"
@@ -1226,7 +1231,7 @@ def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> 
 
         if not col.nullable and not is_serial:
             col_def += " NOT NULL"
-        if col.primary_key:
+        if backend != "clickhouse" and col.primary_key:
             col_def += " PRIMARY KEY"
         elif col.unique:
             col_def += " UNIQUE"
