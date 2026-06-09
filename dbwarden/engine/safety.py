@@ -69,14 +69,28 @@ def _snapshot_column_type_signature(snapshot_column: dict[str, Any]) -> dict[str
 
 def extract_schema_snapshot(database: str | None = None) -> dict[str, dict[str, Any]]:
     from dbwarden.config import get_database
+    from dbwarden.engine.snapshot import extract_full_schema_snapshot
 
     config = get_database(database)
+    full = extract_full_schema_snapshot(database=database)
     if config.database_type == "clickhouse":
-        return _extract_clickhouse_schema_snapshot(database)
+        snapshot: dict[str, dict[str, Any]] = {}
+        for table_name, table in full.get("tables", {}).items():
+            ch_opts = table.get("ch_options", {})
+            clickhouse_options: dict[str, Any] = {}
+            for ch_key, value in ch_opts.items():
+                ck = _CH_OPTION_KEY_MAP.get(ch_key, ch_key)
+                if value is not None:
+                    clickhouse_options[ck] = value
+            snapshot[table_name] = {
+                "database_type": "clickhouse",
+                "object_type": table.get("object_type", "table"),
+                "comment": table.get("comment"),
+                "columns": table.get("columns", {}),
+                "clickhouse_options": clickhouse_options,
+            }
+        return snapshot
     if config.database_type == "postgresql":
-        from dbwarden.engine.snapshot import extract_full_schema_snapshot
-
-        full = extract_full_schema_snapshot(database=database)
         snapshot: dict[str, dict[str, Any]] = {}
         for table_name, table in full.get("tables", {}).items():
             snapshot[table_name] = {
@@ -114,60 +128,6 @@ def _extract_generic_schema_snapshot(database: str | None = None) -> dict[str, d
     return snapshot
 
 
-def _extract_clickhouse_schema_snapshot(database: str | None = None) -> dict[str, dict[str, Any]]:
-    snapshot: dict[str, dict[str, Any]] = {}
-    with get_db_connection(database) as connection:
-        rows = connection.execute(
-            text(
-                "SELECT name, engine, sorting_key, primary_key, partition_key, sampling_key, create_table_query "
-                "FROM system.tables WHERE database = currentDatabase()"
-            )
-        ).fetchall()
-        for row in rows:
-            table_name = row.name
-            columns = connection.execute(
-                text(
-                    "SELECT name, type, default_expression FROM system.columns "
-                    "WHERE database = currentDatabase() AND table = :table_name"
-                ),
-                parameters={"table_name": table_name},
-            ).fetchall()
-            create_query = getattr(row, "create_table_query", "") or ""
-            engine = getattr(row, "engine", "") or ""
-
-            if engine.upper() == "DICTIONARY":
-                object_type = "dictionary"
-            elif create_query.upper().startswith("CREATE MATERIALIZED VIEW"):
-                object_type = "materialized_view"
-            else:
-                object_type = "table"
-
-            snapshot[table_name] = {
-                "object_type": object_type,
-                "columns": {
-                    col.name: {
-                        "type": col.type,
-                        "nullable": col.type.startswith("Nullable("),
-                        "default": getattr(col, "default_expression", None),
-                    }
-                    for col in columns
-                },
-                "clickhouse_options": {
-                    "clickhouse_engine": engine if engine.upper() != "DICTIONARY" else None,
-                    "clickhouse_order_by": _parse_tuple_expression(getattr(row, "sorting_key", None)),
-                    "clickhouse_primary_key": _parse_tuple_expression(getattr(row, "primary_key", None)),
-                    "clickhouse_partition_by": _clean_expression(getattr(row, "partition_key", None)),
-                    "clickhouse_sample_by": _clean_expression(getattr(row, "sampling_key", None)),
-                    "clickhouse_ttl": _parse_ttl_expressions(create_query),
-                    "clickhouse_projections": _parse_projection_names(create_query),
-                    "clickhouse_mv_query": _parse_mv_query(create_query),
-                    "clickhouse_zookeeper_path": _parse_zookeeper_path(create_query, engine),
-                    "clickhouse_replica_name": _parse_replica_name(create_query, engine),
-                },
-            }
-    return snapshot
-
-
 def _clean_expression(value: Any) -> str | None:
     if value is None:
         return None
@@ -186,14 +146,19 @@ def _parse_tuple_expression(value: Any) -> str | list[str] | None:
         if not inner:
             return []
         return [part.strip() for part in inner.split(",")]
+    # Handle bare comma-separated list (common in ClickHouse 24.x)
+    if "," in value_str:
+        parts = [part.strip() for part in value_str.split(",")]
+        if len(parts) > 1:
+            return parts
     return value_str
 
 
 def _parse_ttl_expressions(create_query: str) -> list[str]:
     ttl_match = re.search(
-        r"\bTTL\s+(.+?)(?:\n(?:SETTINGS|COMMENT|AS|PRIMARY KEY|ORDER BY|PARTITION BY|SAMPLE BY)\b|$)",
+        r"\bTTL\s+(.+?)(?:\s+(?:SETTINGS|COMMENT|AS|PRIMARY KEY|ORDER BY|PARTITION BY|SAMPLE BY)\b|$)",
         create_query,
-        re.IGNORECASE | re.DOTALL,
+        re.IGNORECASE,
     )
     if not ttl_match:
         return []

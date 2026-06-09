@@ -1081,7 +1081,7 @@ def _parse_clickhouse_replica_name(create_query: str, engine: str) -> str | None
 
 
 def _parse_clickhouse_settings(create_query: str) -> dict[str, str] | None:
-    settings_match = re.search(r"\bSETTINGS\s+(.+?)(?:\n(?:COMMENT|AS)\b|$)", create_query, re.IGNORECASE | re.DOTALL)
+    settings_match = re.search(r"\bSETTINGS\s+(.+?)(?:\s+(?:COMMENT|AS)\b|$)", create_query, re.IGNORECASE)
     if not settings_match:
         return None
     settings: dict[str, str] = {}
@@ -1093,21 +1093,38 @@ def _parse_clickhouse_settings(create_query: str) -> dict[str, str] | None:
     return settings or None
 
 
+def _extract_balanced_parens(match: re.Match) -> str | None:
+    """Extract content between the first balanced outer parens."""
+    start = match.end() - 1  # position of opening paren
+    depth = 0
+    for i in range(start, len(match.string)):
+        ch = match.string[i]
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+            if depth == 0:
+                return match.string[start + 1 : i]
+    return None
+
+
 def _parse_clickhouse_dict_layout(create_query: str) -> str | None:
-    match = re.search(r"\bLAYOUT\s*\((.+?)\)", create_query, re.IGNORECASE | re.DOTALL)
-    return match.group(1).strip() if match else None
+    match = re.search(r"\bLAYOUT\s*\(", create_query, re.IGNORECASE)
+    return _extract_balanced_parens(match) if match else None
 
 
 def _parse_clickhouse_dict_source(create_query: str) -> str | None:
-    match = re.search(r"\bSOURCE\s*\((.+?)\)", create_query, re.IGNORECASE | re.DOTALL)
-    return match.group(1).strip() if match else None
+    match = re.search(r"\bSOURCE\s*\(", create_query, re.IGNORECASE)
+    return _extract_balanced_parens(match) if match else None
 
 
 def _parse_clickhouse_dict_lifetime(create_query: str) -> str | int | None:
-    match = re.search(r"\bLIFETIME\s*\((.+?)\)", create_query, re.IGNORECASE | re.DOTALL)
+    match = re.search(r"\bLIFETIME\s*\(", create_query, re.IGNORECASE)
     if not match:
         return None
-    value = match.group(1).strip()
+    value = _extract_balanced_parens(match)
+    if value is None:
+        return None
     try:
         return int(value)
     except ValueError:
@@ -1115,7 +1132,7 @@ def _parse_clickhouse_dict_lifetime(create_query: str) -> str | int | None:
 
 
 def _parse_clickhouse_dict_primary_key(create_query: str) -> str | None:
-    match = re.search(r"\bPRIMARY\s+KEY\s+(.+?)(?:\)|LAYOUT)", create_query, re.IGNORECASE | re.DOTALL)
+    match = re.search(r"\bPRIMARY\s+KEY\s+(.+?)(?=\s+(?:SOURCE|LAYOUT|LIFETIME)\b)", create_query, re.IGNORECASE)
     return match.group(1).strip() if match else None
 
 
@@ -1410,6 +1427,93 @@ def _index_op_from_info(info: IndexInfo, table: str) -> dict[str, Any]:
     return op
 
 
+_CH_OPTION_KEYS: frozenset[str] = frozenset({
+    "ch_engine",
+    "ch_order_by",
+    "ch_primary_key",
+    "ch_partition_by",
+    "ch_sample_by",
+    "ch_ttl",
+    "ch_settings",
+    "ch_object_type",
+    "ch_select_statement",
+    "ch_to_table",
+    "ch_dictionary",
+    "ch_dict_layout",
+    "ch_dict_source",
+    "ch_dict_lifetime",
+    "ch_dict_primary_key",
+    "ch_zookeeper_path",
+    "ch_replica_name",
+    "ch_projections",
+})
+
+
+def _diff_ch_options(
+    snap_opts: dict,
+    model_opts: dict,
+    table_name: str,
+    upgrade_ops: list[dict],
+    rollback_ops: list[dict],
+) -> None:
+    ch_changes: dict[str, dict[str, Any]] = {}
+    for key in _CH_OPTION_KEYS:
+        snap_val = snap_opts.get(key)
+        model_val = model_opts.get(key)
+        if json.dumps(snap_val, sort_keys=True, default=str) != json.dumps(model_val, sort_keys=True, default=str):
+            if snap_val is None and model_val is None:
+                continue
+            ch_changes[key] = {"from": snap_val, "to": model_val}
+    if ch_changes:
+        upgrade_ops.append({
+            "type": "alter_ch_options",
+            "table": table_name,
+            "changes": ch_changes,
+        })
+        rollback_ops.append({
+            "type": "alter_ch_options",
+            "table": table_name,
+            "changes": {k: {"from": v["to"], "to": v["from"]} for k, v in ch_changes.items()},
+        })
+
+
+_CH_COLUMN_KEYS: frozenset[str] = frozenset({
+    "ch_codec",
+    "ch_default_expression",
+    "ch_materialized",
+    "ch_alias",
+    "ch_ttl",
+    "ch_low_cardinality",
+    "ch_nullable",
+    "ch_type",
+})
+
+
+def _diff_ch_column_extras(
+    snap_ch_col: dict,
+    model_ch_col: dict,
+    table_name: str,
+    col_name: str,
+    upgrade_ops: list[dict],
+    rollback_ops: list[dict],
+) -> None:
+    if json.dumps(snap_ch_col, sort_keys=True, default=str) != json.dumps(model_ch_col, sort_keys=True, default=str):
+        upgrade_ops.append({
+            "type": "alter_ch_column",
+            "table": table_name,
+            "column": col_name,
+            "from_ch_column": snap_ch_col,
+            "to_ch_column": model_ch_col,
+        })
+        rollback_ops.append({
+            "type": "alter_ch_column",
+            "table": table_name,
+            "column": col_name,
+            "from_ch_column": model_ch_col,
+            "to_ch_column": snap_ch_col,
+        })
+
+
 _SNAP_TO_MODEL_KEY = {
     "collation": "pg_collation",
     "storage": "pg_storage",
@@ -1503,45 +1607,7 @@ def diff_models_against_snapshot(
 
         snap_ch_options = snap_table.get("ch_options") or snap_table.get("clickhouse_options") or {}
         model_ch_options = table.clickhouse_options or {}
-        ch_option_keys = {
-            "ch_engine",
-            "ch_order_by",
-            "ch_primary_key",
-            "ch_partition_by",
-            "ch_sample_by",
-            "ch_ttl",
-            "ch_settings",
-            "ch_object_type",
-            "ch_select_statement",
-            "ch_to_table",
-            "ch_dictionary",
-            "ch_dict_layout",
-            "ch_dict_source",
-            "ch_dict_lifetime",
-            "ch_dict_primary_key",
-            "ch_zookeeper_path",
-            "ch_replica_name",
-            "ch_projections",
-        }
-        ch_changes: dict[str, dict[str, Any]] = {}
-        for key in ch_option_keys:
-            snap_val = snap_ch_options.get(key)
-            model_val = model_ch_options.get(key)
-            if json.dumps(snap_val, sort_keys=True, default=str) != json.dumps(model_val, sort_keys=True, default=str):
-                if snap_val is None and model_val is None:
-                    continue
-                ch_changes[key] = {"from": snap_val, "to": model_val}
-        if ch_changes:
-            upgrade_ops.append({
-                "type": "alter_ch_options",
-                "table": table.name,
-                "changes": ch_changes,
-            })
-            rollback_ops.append({
-                "type": "alter_ch_options",
-                "table": table.name,
-                "changes": {k: {"from": v["to"], "to": v["from"]} for k, v in ch_changes.items()},
-            })
+        _diff_ch_options(snap_ch_options, model_ch_options, table.name, upgrade_ops, rollback_ops)
 
         dropped_cols = []
         for col_name in snap_columns:
@@ -1674,21 +1740,7 @@ def diff_models_against_snapshot(
 
             snap_ch_col = snap_col.get("ch_column") or {}
             model_ch_col = model_col.ch_meta or {}
-            if json.dumps(snap_ch_col, sort_keys=True, default=str) != json.dumps(model_ch_col, sort_keys=True, default=str):
-                upgrade_ops.append({
-                    "type": "alter_ch_column",
-                    "table": table.name,
-                    "column": col_name,
-                    "from_ch_column": snap_ch_col,
-                    "to_ch_column": model_ch_col,
-                })
-                rollback_ops.append({
-                    "type": "alter_ch_column",
-                    "table": table.name,
-                    "column": col_name,
-                    "from_ch_column": model_ch_col,
-                    "to_ch_column": snap_ch_col,
-                })
+            _diff_ch_column_extras(snap_ch_col, model_ch_col, table.name, col_name, upgrade_ops, rollback_ops)
 
         for col_name, col_def in dropped_cols:
             if col_name in renamed_old:
