@@ -512,3 +512,66 @@ def load_issues(database: str | None = None) -> list[SafetyIssue]:
 
 def issues_to_json(issues: list[SafetyIssue]) -> str:
     return json.dumps([asdict(issue) for issue in issues], indent=2)
+
+
+CH_COLUMN_CRITICAL = frozenset({"ch_type", "ch_low_cardinality", "ch_nullable"})
+CH_COLUMN_WARN = frozenset({"ch_codec", "ch_default_expression", "ch_materialized", "ch_alias", "ch_ttl"})
+
+
+def classify_ch_column_change(key: str) -> str:
+    if key in CH_COLUMN_CRITICAL:
+        return "CRITICAL"
+    if key in CH_COLUMN_WARN:
+        return "WARN"
+    return "INFO"
+
+
+CH_OPTION_CRITICAL = frozenset({
+    "ch_engine_raw", "ch_order_by", "ch_object_type",
+    "ch_select_statement", "ch_to_table", "ch_dictionary",
+})
+CH_OPTION_WARN = frozenset({
+    "ch_partition_by", "ch_settings", "ch_zookeeper_path", "ch_replica_name",
+    "ch_dict_layout", "ch_dict_source", "ch_dict_lifetime", "ch_dict_primary_key",
+})
+
+
+def classify_ch_options_change(key: str) -> str:
+    if key in CH_OPTION_CRITICAL:
+        return "CRITICAL"
+    if key in CH_OPTION_WARN:
+        return "WARN"
+    return "INFO"
+
+
+def classify_ch_safety(
+    op: dict,
+    model_column: Any = None,
+    snapshot_column: Any = None,
+) -> list[SafetyIssue]:
+    issues: list[SafetyIssue] = []
+    if op["type"] == "alter_ch_column":
+        for key, change in op.get("ch_options", {}).items():
+            issues.append(SafetyIssue(
+                change_type="change_ch_column",
+                table_name=op["table"],
+                column_name=op["column"],
+                severity=classify_ch_column_change(key),
+                message=f"CH column {op['column']} {key}: {change.get('from')} -> {change.get('to')}",
+            ))
+    elif op["type"] == "alter_ch_options":
+        for key, change in op.get("ch_options", {}).items():
+            issues.append(SafetyIssue(
+                change_type="change_ch_options",
+                table_name=op["table"],
+                severity=classify_ch_options_change(key),
+                message=f"CH option {key}: {change.get('from')} -> {change.get('to')}",
+            ))
+    elif op["type"] == "drop_table" and op.get("object_type") == "materialized_view":
+        issues.append(SafetyIssue(
+            change_type="drop_materialized_view",
+            table_name=op["table"],
+            severity="CRITICAL",
+            message=f"Dropping materialized view {op['table']} will lose the transformation logic",
+        ))
+    return issues
