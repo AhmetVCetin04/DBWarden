@@ -233,9 +233,11 @@ Output:
 
 ```
 drop_column on users.username
-  Affects:
-    app/routes/users.py:34 (attribute access)
-    app/templates/profile.jinja2:12 (template usage)
+  References: 2
+    app/routes/users.py:34  attribute_access
+      .username
+    app/templates/profile.jinja2:12  grep
+      user.username
 ```
 
 Run this before any destructive deploy to surface breaking changes before they reach production.
@@ -309,7 +311,7 @@ DBWarden exposes database sessions directly from the configuration object, keepi
 
 ```python
 @app.get("/users")
-async def list_users(session=primary.async_session):
+async def list_users(session: primary.async_session):
     result = await session.execute(select(User))
     return result.scalars().all()
 ```
@@ -389,7 +391,7 @@ Optional but powerful: derive your entire API schema layer directly from your SQ
 | Database   | Role                          | Notes                            |
 |------------|-------------------------------|----------------------------------|
 | PostgreSQL | Primary transactional backend | Full round-trip fidelity         |
-| ClickHouse | Analytics backend             | Full schema support              |
+| ClickHouse | Analytics backend             | Full round-trip fidelity         |
 | MySQL      | General support               | DDL parity focus                 |
 | MariaDB    | General support               | MySQL-compatible mode            |
 | SQLite     | Dev and testing               | Used in dev mode SQL translation |
