@@ -69,14 +69,28 @@ def _snapshot_column_type_signature(snapshot_column: dict[str, Any]) -> dict[str
 
 def extract_schema_snapshot(database: str | None = None) -> dict[str, dict[str, Any]]:
     from dbwarden.config import get_database
+    from dbwarden.engine.snapshot import extract_full_schema_snapshot
 
     config = get_database(database)
+    full = extract_full_schema_snapshot(database=database)
     if config.database_type == "clickhouse":
-        return _extract_clickhouse_schema_snapshot(database)
+        snapshot: dict[str, dict[str, Any]] = {}
+        for table_name, table in full.get("tables", {}).items():
+            ch_opts = table.get("ch_options", {})
+            clickhouse_options: dict[str, Any] = {}
+            for ch_key, value in ch_opts.items():
+                ck = _CH_OPTION_KEY_MAP.get(ch_key, ch_key)
+                if value is not None:
+                    clickhouse_options[ck] = value
+            snapshot[table_name] = {
+                "database_type": "clickhouse",
+                "object_type": table.get("object_type", "table"),
+                "comment": table.get("comment"),
+                "columns": table.get("columns", {}),
+                "clickhouse_options": clickhouse_options,
+            }
+        return snapshot
     if config.database_type == "postgresql":
-        from dbwarden.engine.snapshot import extract_full_schema_snapshot
-
-        full = extract_full_schema_snapshot(database=database)
         snapshot: dict[str, dict[str, Any]] = {}
         for table_name, table in full.get("tables", {}).items():
             snapshot[table_name] = {
@@ -114,60 +128,6 @@ def _extract_generic_schema_snapshot(database: str | None = None) -> dict[str, d
     return snapshot
 
 
-def _extract_clickhouse_schema_snapshot(database: str | None = None) -> dict[str, dict[str, Any]]:
-    snapshot: dict[str, dict[str, Any]] = {}
-    with get_db_connection(database) as connection:
-        rows = connection.execute(
-            text(
-                "SELECT name, engine, sorting_key, primary_key, partition_key, sampling_key, create_table_query "
-                "FROM system.tables WHERE database = currentDatabase()"
-            )
-        ).fetchall()
-        for row in rows:
-            table_name = row.name
-            columns = connection.execute(
-                text(
-                    "SELECT name, type, default_expression FROM system.columns "
-                    "WHERE database = currentDatabase() AND table = :table_name"
-                ),
-                parameters={"table_name": table_name},
-            ).fetchall()
-            create_query = getattr(row, "create_table_query", "") or ""
-            engine = getattr(row, "engine", "") or ""
-
-            if engine.upper() == "DICTIONARY":
-                object_type = "dictionary"
-            elif create_query.upper().startswith("CREATE MATERIALIZED VIEW"):
-                object_type = "materialized_view"
-            else:
-                object_type = "table"
-
-            snapshot[table_name] = {
-                "object_type": object_type,
-                "columns": {
-                    col.name: {
-                        "type": col.type,
-                        "nullable": col.type.startswith("Nullable("),
-                        "default": getattr(col, "default_expression", None),
-                    }
-                    for col in columns
-                },
-                "clickhouse_options": {
-                    "clickhouse_engine": engine if engine.upper() != "DICTIONARY" else None,
-                    "clickhouse_order_by": _parse_tuple_expression(getattr(row, "sorting_key", None)),
-                    "clickhouse_primary_key": _parse_tuple_expression(getattr(row, "primary_key", None)),
-                    "clickhouse_partition_by": _clean_expression(getattr(row, "partition_key", None)),
-                    "clickhouse_sample_by": _clean_expression(getattr(row, "sampling_key", None)),
-                    "clickhouse_ttl": _parse_ttl_expressions(create_query),
-                    "clickhouse_projections": _parse_projection_names(create_query),
-                    "clickhouse_mv_query": _parse_mv_query(create_query),
-                    "clickhouse_zookeeper_path": _parse_zookeeper_path(create_query, engine),
-                    "clickhouse_replica_name": _parse_replica_name(create_query, engine),
-                },
-            }
-    return snapshot
-
-
 def _clean_expression(value: Any) -> str | None:
     if value is None:
         return None
@@ -186,14 +146,19 @@ def _parse_tuple_expression(value: Any) -> str | list[str] | None:
         if not inner:
             return []
         return [part.strip() for part in inner.split(",")]
+    # Handle bare comma-separated list (common in ClickHouse 24.x)
+    if "," in value_str:
+        parts = [part.strip() for part in value_str.split(",")]
+        if len(parts) > 1:
+            return parts
     return value_str
 
 
 def _parse_ttl_expressions(create_query: str) -> list[str]:
     ttl_match = re.search(
-        r"\bTTL\s+(.+?)(?:\n(?:SETTINGS|COMMENT|AS|PRIMARY KEY|ORDER BY|PARTITION BY|SAMPLE BY)\b|$)",
+        r"\bTTL\s+(.+?)(?:\s+(?:SETTINGS|COMMENT|AS|PRIMARY KEY|ORDER BY|PARTITION BY|SAMPLE BY)\b|$)",
         create_query,
-        re.IGNORECASE | re.DOTALL,
+        re.IGNORECASE,
     )
     if not ttl_match:
         return []
@@ -201,8 +166,24 @@ def _parse_ttl_expressions(create_query: str) -> list[str]:
     return [part.strip() for part in ttl_body.split(",") if part.strip()]
 
 
+def _parse_projection_queries(create_query: str) -> list[dict[str, str]]:
+    from dbwarden.engine.snapshot import _extract_balanced_parens
+    results: list[dict[str, str]] = []
+    pattern = re.compile(r"PROJECTION\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(", re.IGNORECASE)
+    pos = 0
+    while True:
+        match = pattern.search(create_query, pos)
+        if not match:
+            break
+        name = match.group(1)
+        query = _extract_balanced_parens(match)
+        results.append({"name": name, "query": (query or "").strip()})
+        pos = match.end()
+    return results
+
+
 def _parse_projection_names(create_query: str) -> list[str]:
-    return re.findall(r"PROJECTION\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(", create_query, re.IGNORECASE)
+    return [p["name"] for p in _parse_projection_queries(create_query)]
 
 
 def _parse_mv_query(create_query: str) -> str | None:
@@ -425,6 +406,33 @@ def _analyze_table(table_snapshot: dict[str, Any], model_table: ModelTable) -> l
     return issues
 
 
+_CH_OPTION_KEY_MAP: dict[str, str] = {
+    "ch_order_by": "clickhouse_order_by",
+    "ch_partition_by": "clickhouse_partition_by",
+    "ch_ttl": "clickhouse_ttl",
+    "ch_engine": "clickhouse_engine",
+    "ch_select_statement": "clickhouse_mv_query",
+    "ch_zookeeper_path": "clickhouse_zookeeper_path",
+    "ch_replica_name": "clickhouse_replica_name",
+    "ch_dict_source": "clickhouse_dict_source",
+    "ch_dict_layout": "clickhouse_dict_layout",
+    "ch_dict_lifetime": "clickhouse_dict_lifetime",
+}
+
+_CH_OPTION_RULES: dict[str, tuple[str, str | None, str]] = {
+    "ch_order_by": ("ERROR", None, "Change ORDER BY for '{table}'"),
+    "ch_partition_by": ("ERROR", None, "Change PARTITION BY for '{table}'"),
+    "ch_ttl": ("WARNING", "--force", "Change TTL for '{table}'"),
+    "ch_engine": ("WARNING", "--force", "Change engine for '{table}'"),
+    "ch_select_statement": ("WARNING", "--force", "Change materialized view query for '{table}'"),
+    "ch_zookeeper_path": ("WARNING", "--force", "Change ZooKeeper path for '{table}'"),
+    "ch_replica_name": ("WARNING", "--force", "Change replica name for '{table}'"),
+    "ch_dict_source": ("WARNING", "--force", "Change dictionary source for '{table}'"),
+    "ch_dict_layout": ("WARNING", "--force", "Change dictionary layout for '{table}'"),
+    "ch_dict_lifetime": ("WARNING", "--force", "Change dictionary lifetime for '{table}'"),
+}
+
+
 def _analyze_clickhouse_options(table_snapshot: dict[str, Any], model_table: ModelTable) -> list[SafetyIssue]:
     issues: list[SafetyIssue] = []
     snapshot_options = table_snapshot.get("clickhouse_options", {})
@@ -432,39 +440,42 @@ def _analyze_clickhouse_options(table_snapshot: dict[str, Any], model_table: Mod
     if not snapshot_options and not model_options:
         return issues
 
-    option_rules = {
-        "clickhouse_order_by": ("ERROR", None, "Change ORDER BY for '{table}'"),
-        "clickhouse_partition_by": ("ERROR", None, "Change PARTITION BY for '{table}'"),
-        "clickhouse_ttl": ("WARNING", "--force", "Change TTL for '{table}'"),
-        "clickhouse_engine": ("WARNING", "--force", "Change engine for '{table}'"),
-        "clickhouse_mv_query": ("WARNING", "--force", "Change materialized view query for '{table}'"),
-        "clickhouse_mv_populate": ("WARNING", "--force", "Enable POPULATE for materialized view '{table}'"),
-        "clickhouse_zookeeper_path": ("WARNING", "--force", "Change ZooKeeper path for '{table}'"),
-        "clickhouse_replica_name": ("WARNING", "--force", "Change replica name for '{table}'"),
-        "clickhouse_dict_source": ("WARNING", "--force", "Change dictionary source for '{table}'"),
-        "clickhouse_dict_layout": ("WARNING", "--force", "Change dictionary layout for '{table}'"),
-        "clickhouse_dict_lifetime": ("WARNING", "--force", "Change dictionary lifetime for '{table}'"),
-    }
+    for ch_key, (severity, required_flag, template) in _CH_OPTION_RULES.items():
+        model_val = _normalize_option_value(model_options.get(ch_key))
+        # Try ch_* first, fall back to clickhouse_* for backward compat
+        snap_key = ch_key
+        snap_val = _normalize_option_value(snapshot_options.get(snap_key))
+        if snap_val is None and snap_key in _CH_OPTION_KEY_MAP:
+            snap_val = _normalize_option_value(snapshot_options.get(_CH_OPTION_KEY_MAP[snap_key]))
 
-    for key, (severity, required_flag, template) in option_rules.items():
-        if _normalize_option_value(snapshot_options.get(key)) != _normalize_option_value(model_options.get(key)):
-            if snapshot_options.get(key) is None and model_options.get(key) is None:
+        if snap_val != model_val:
+            if snap_val is None and model_val is None:
                 continue
             issues.append(
                 SafetyIssue(
                     severity=severity,
-                    change_type=key,
+                    change_type=_CH_OPTION_KEY_MAP.get(ch_key, ch_key),
                     table_name=model_table.name,
                     message=template.format(table=model_table.name),
                     required_flag=required_flag,
                 )
             )
 
-    snapshot_projections = set(snapshot_options.get("clickhouse_projections") or [])
-    model_projections = {
-        projection["name"]
-        for projection in (model_options.get("clickhouse_projections") or [])
-    }
+    model_projections_raw = model_options.get("ch_projections") or []
+    model_projections = set()
+    for proj in model_projections_raw:
+        if isinstance(proj, dict):
+            model_projections.add(proj["name"])
+        elif hasattr(proj, "name"):
+            model_projections.add(proj.name)
+
+    snapshot_projections_raw = snapshot_options.get("ch_projections") or snapshot_options.get("clickhouse_projections") or []
+    snapshot_projections = set()
+    for proj in snapshot_projections_raw:
+        if isinstance(proj, dict):
+            snapshot_projections.add(proj["name"])
+        elif hasattr(proj, "name"):
+            snapshot_projections.add(proj.name)
 
     for projection_name in sorted(model_projections - snapshot_projections):
         issues.append(
@@ -501,3 +512,66 @@ def load_issues(database: str | None = None) -> list[SafetyIssue]:
 
 def issues_to_json(issues: list[SafetyIssue]) -> str:
     return json.dumps([asdict(issue) for issue in issues], indent=2)
+
+
+CH_COLUMN_CRITICAL = frozenset({"ch_type", "ch_low_cardinality", "ch_nullable"})
+CH_COLUMN_WARN = frozenset({"ch_codec", "ch_default_expression", "ch_materialized", "ch_alias", "ch_ttl"})
+
+
+def classify_ch_column_change(key: str) -> str:
+    if key in CH_COLUMN_CRITICAL:
+        return "CRITICAL"
+    if key in CH_COLUMN_WARN:
+        return "WARN"
+    return "INFO"
+
+
+CH_OPTION_CRITICAL = frozenset({
+    "ch_engine_raw", "ch_order_by", "ch_object_type",
+    "ch_select_statement", "ch_to_table", "ch_dictionary",
+})
+CH_OPTION_WARN = frozenset({
+    "ch_partition_by", "ch_settings", "ch_zookeeper_path", "ch_replica_name",
+    "ch_dict_layout", "ch_dict_source", "ch_dict_lifetime", "ch_dict_primary_key",
+})
+
+
+def classify_ch_options_change(key: str) -> str:
+    if key in CH_OPTION_CRITICAL:
+        return "CRITICAL"
+    if key in CH_OPTION_WARN:
+        return "WARN"
+    return "INFO"
+
+
+def classify_ch_safety(
+    op: dict,
+    model_column: Any = None,
+    snapshot_column: Any = None,
+) -> list[SafetyIssue]:
+    issues: list[SafetyIssue] = []
+    if op["type"] == "alter_ch_column":
+        for key, change in op.get("ch_options", {}).items():
+            issues.append(SafetyIssue(
+                change_type="change_ch_column",
+                table_name=op["table"],
+                column_name=op["column"],
+                severity=classify_ch_column_change(key),
+                message=f"CH column {op['column']} {key}: {change.get('from')} -> {change.get('to')}",
+            ))
+    elif op["type"] == "alter_ch_options":
+        for key, change in op.get("ch_options", {}).items():
+            issues.append(SafetyIssue(
+                change_type="change_ch_options",
+                table_name=op["table"],
+                severity=classify_ch_options_change(key),
+                message=f"CH option {key}: {change.get('from')} -> {change.get('to')}",
+            ))
+    elif op["type"] == "drop_table" and op.get("object_type") == "materialized_view":
+        issues.append(SafetyIssue(
+            change_type="drop_materialized_view",
+            table_name=op["table"],
+            severity="CRITICAL",
+            message=f"Dropping materialized view {op['table']} will lose the transformation logic",
+        ))
+    return issues

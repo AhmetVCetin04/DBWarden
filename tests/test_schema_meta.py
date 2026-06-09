@@ -8,6 +8,8 @@ import dbwarden.engine.model_discovery as model_discovery
 from dbwarden.engine.model_discovery import extract_table_from_model
 from dbwarden.exceptions import DBWardenConfigError
 from dbwarden.schema import (
+    CHColumnMeta,
+    CHTableMeta,
     CheckSpec,
     UniqueSpec,
     apply_meta,
@@ -16,6 +18,8 @@ from dbwarden.schema import (
     read_meta,
     unique,
 )
+from dbwarden.schema.engine import ChEngineSpec
+from dbwarden.schema.projection import ProjectionSpec
 
 
 class Base(DeclarativeBase):
@@ -83,7 +87,6 @@ class TestMetaReader:
         assert email_info["dw_public"] is True
         assert email_info["pg_collation"] == "en_US.UTF-8"
         assert bio_info["ch_codec"] == "ZSTD(3)"
-        assert bio_info["clickhouse_codec"] == "ZSTD(3)"
         assert created_info["dw_comment"] == "Record creation timestamp"
         assert meta is not None
         assert meta.comment == "Core user accounts"
@@ -136,8 +139,8 @@ class TestMetaReader:
         table = extract_table_from_model(Event)
 
         assert table is not None
-        assert table.clickhouse_options["clickhouse_engine"] == "MergeTree"
-        assert table.clickhouse_options["clickhouse_order_by"] == ["id"]
+        assert table.clickhouse_options["ch_engine"] == "MergeTree"
+        assert table.clickhouse_options["ch_order_by"] == ["id"]
         assert table.columns[1].codec == "ZSTD(3)"
 
     def test_extract_table_from_model_allows_wrong_backend_keys(self, monkeypatch):
@@ -265,3 +268,291 @@ class TestMetaIndexes:
         # SQLAlchemy indexes take precedence
         assert len(table.indexes) == 1
         assert table.indexes[0].name == "ix_sa_title"
+
+
+class TestCHTableMeta:
+    def test_ch_table_meta_all_fields_accessible(self):
+        """CHTableMeta class attributes are defined."""
+        assert hasattr(CHTableMeta, "ch_engine")
+        assert hasattr(CHTableMeta, "ch_order_by")
+        assert hasattr(CHTableMeta, "ch_primary_key")
+        assert hasattr(CHTableMeta, "ch_partition_by")
+        assert hasattr(CHTableMeta, "ch_sample_by")
+        assert hasattr(CHTableMeta, "ch_ttl")
+        assert hasattr(CHTableMeta, "ch_settings")
+        assert hasattr(CHTableMeta, "ch_object_type")
+        assert hasattr(CHTableMeta, "ch_select_statement")
+        assert hasattr(CHTableMeta, "ch_zookeeper_path")
+        assert hasattr(CHTableMeta, "ch_replica_name")
+        assert hasattr(CHTableMeta, "ch_to_table")
+        assert hasattr(CHTableMeta, "ch_dict_layout")
+        assert hasattr(CHTableMeta, "ch_dict_source")
+        assert hasattr(CHTableMeta, "ch_dict_lifetime")
+        assert hasattr(CHTableMeta, "ch_dict_primary_key")
+        assert hasattr(CHTableMeta, "ch_projections")
+        assert hasattr(CHTableMeta, "ch_dictionary")
+        assert hasattr(CHTableMeta, "comment")
+
+    def test_ch_column_meta_all_fields_accessible(self):
+        assert hasattr(CHColumnMeta, "ch_codec")
+        assert hasattr(CHColumnMeta, "ch_default_expression")
+        assert hasattr(CHColumnMeta, "ch_materialized")
+        assert hasattr(CHColumnMeta, "ch_alias")
+        assert hasattr(CHColumnMeta, "ch_ttl")
+        assert hasattr(CHColumnMeta, "ch_low_cardinality")
+        assert hasattr(CHColumnMeta, "ch_nullable")
+
+    def test_ch_engine_spec_in_meta(self, monkeypatch):
+        class Event(Base):
+            __tablename__ = "events2"
+
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+            payload: Mapped[str] = mapped_column(String(255))
+
+            class Meta:
+                ch_engine = ChEngineSpec(name="ReplicatedMergeTree", args=("/clickhouse/tables/{shard}", "{replica}"))
+                ch_order_by = ["id"]
+                ch_partition_by = ["toYYYYMM(created_at)"]
+
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+
+        table = extract_table_from_model(Event)
+        # ch_engine_raw holds the original ChEngineSpec object
+        engine_raw = table.clickhouse_options["ch_engine_raw"]
+        assert isinstance(engine_raw, ChEngineSpec)
+        assert engine_raw.name == "ReplicatedMergeTree"
+        assert engine_raw.args == ("/clickhouse/tables/{shard}", "{replica}")
+        assert table.clickhouse_options["ch_order_by"] == ["id"]
+        assert table.clickhouse_options["ch_partition_by"] == ["toYYYYMM(created_at)"]
+
+    def test_ch_projections_meta(self, monkeypatch):
+        from dbwarden.schema import ProjectionSpec
+
+        class Event(Base):
+            __tablename__ = "events3"
+
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+            payload: Mapped[str] = mapped_column(String(255))
+
+            class Meta:
+                ch_engine = "MergeTree"
+                ch_order_by = ["id"]
+                ch_projections = [
+                    ProjectionSpec(name="proj_day", query="SELECT id, toDate(created_at) AS day GROUP BY day"),
+                ]
+
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+
+        table = extract_table_from_model(Event)
+        projections = table.clickhouse_options["ch_projections"]
+        assert len(projections) == 1
+        assert projections[0]["name"] == "proj_day"
+        assert "toDate(created_at) AS day" in projections[0]["query"]
+
+    def test_ch_meta_inheritance(self, monkeypatch):
+        class BaseCH(Base):
+            __abstract__ = True
+
+            class Meta:
+                ch_engine = "ReplicatedMergeTree"
+                ch_order_by = ["id"]
+
+        class DerivedCH(BaseCH):
+            __tablename__ = "derived_ch"
+
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+            payload: Mapped[str] = mapped_column(String(255))
+
+            class Meta(BaseCH.Meta):
+                ch_partition_by = ["toYYYYMM(created_at)"]
+
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+
+        table = extract_table_from_model(DerivedCH)
+        assert table.clickhouse_options["ch_engine"] == "ReplicatedMergeTree"
+        assert table.clickhouse_options["ch_order_by"] == ["id"]
+        assert table.clickhouse_options["ch_partition_by"] == ["toYYYYMM(created_at)"]
+
+    def test_no_clickhouse_backward_compat_keys_in_info(self, monkeypatch):
+        class NoCompat(Base):
+            __tablename__ = "no_compat_ch"
+
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+            payload: Mapped[str] = mapped_column(String(255))
+
+            class Meta:
+                ch_engine = "MergeTree"
+                ch_order_by = ["id"]
+
+                class payload:
+                    ch_codec = "ZSTD(3)"
+
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+
+        table = extract_table_from_model(NoCompat)
+        # No clickhouse_* keys should exist in column ch_meta
+        for col in table.columns:
+            for key in col.ch_meta:
+                assert not key.startswith("clickhouse_"), f"Backward compat key {key} found"
+        # ch_* keys should be in clickhouse_options
+        assert "ch_engine" in table.clickhouse_options
+
+    def test_ch_meta_apply_meta(self):
+        """apply_meta should propagate CH column metadata to column.info."""
+        class CHModel(Base):
+            __tablename__ = "ch_models"
+
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+            body: Mapped[str] = mapped_column(String(255))
+
+            class Meta:
+                ch_engine = "MergeTree"
+                ch_order_by = ["id"]
+
+                class body:
+                    ch_codec = "ZSTD(3)"
+                    ch_compression_codec = "LZ4HC(1)"
+                    ch_comment = "body column"
+
+        apply_meta(CHModel)
+        body_info = CHModel.__table__.c.body.info
+        assert body_info["ch_codec"] == "ZSTD(3)"
+        assert body_info["ch_compression_codec"] == "LZ4HC(1)"
+        assert body_info["ch_comment"] == "body column"
+
+
+class TestIndexSpecExtensions:
+    def test_index_spec_to_dict_from_dict(self):
+        from dbwarden.schema.index import IndexSpec
+
+        spec = IndexSpec(columns=["a", "b"], name="ix_ab", unique=True,
+                         using="gin", where="status = 'active'",
+                         nulls_not_distinct=True, include=["c"],
+                         tablespace="fast_ts")
+        d = spec.to_dict()
+        assert d["name"] == "ix_ab"
+        assert d["columns"] == ["a", "b"]
+        assert d["unique"] is True
+        assert d["using"] == "gin"
+        assert d["where"] == "status = 'active'"
+        assert d["nulls_not_distinct"] is True
+        assert d["include"] == ["c"]
+        assert d["tablespace"] == "fast_ts"
+
+        restored = IndexSpec.from_dict(d)
+        assert restored.name == "ix_ab"
+        assert restored.columns == ["a", "b"]
+        assert restored.unique is True
+        assert restored.include == ["c"]
+
+    def test_index_spec_clickhouse_skip(self):
+        from dbwarden.schema.index import IndexSpec
+
+        spec = IndexSpec(columns=["a"], name="ix_sk", unique=False,
+                         clickhouse_type="set(100)", clickhouse_granularity=2)
+        d = spec.to_dict()
+        assert d["clickhouse_type"] == "set(100)"
+        assert d["clickhouse_granularity"] == 2
+
+        restored = IndexSpec.from_dict(d)
+        assert restored.clickhouse_type == "set(100)"
+        assert restored.clickhouse_granularity == 2
+
+
+class TestChEngineSpec:
+    def test_basic_construction(self):
+        from dbwarden.schema.engine import ChEngineSpec
+        spec = ChEngineSpec("MergeTree")
+        assert spec.name == "MergeTree"
+        assert spec.args == ()
+        assert spec.zookeeper_path is None
+        assert spec.replica_name is None
+        assert spec.settings is None
+
+    def test_with_args(self):
+        from dbwarden.schema.engine import ChEngineSpec
+        spec = ChEngineSpec("ReplacingMergeTree", args=("version_col",))
+        assert spec.name == "ReplacingMergeTree"
+        assert spec.args == ("version_col",)
+
+    def test_with_zk_and_replica(self):
+        from dbwarden.schema.engine import ChEngineSpec
+        spec = ChEngineSpec("ReplicatedMergeTree",
+            zookeeper_path="/zk/path", replica_name="{replica}")
+        assert spec.zookeeper_path == "/zk/path"
+        assert spec.replica_name == "{replica}"
+
+    def test_with_settings(self):
+        from dbwarden.schema.engine import ChEngineSpec
+        spec = ChEngineSpec("MergeTree",
+            settings={"index_granularity": "8192"})
+        assert spec.settings == {"index_granularity": "8192"}
+
+    def test_to_dict_roundtrip(self):
+        from dbwarden.schema.engine import ChEngineSpec
+        spec = ChEngineSpec("ReplicatedMergeTree",
+            args=("ver",), zookeeper_path="/zk", replica_name="{r}",
+            settings={"s": "1"})
+        d = spec.to_dict()
+        restored = ChEngineSpec.from_dict(d)
+        assert restored.name == spec.name
+        assert restored.args == spec.args
+        assert restored.zookeeper_path == spec.zookeeper_path
+        assert restored.replica_name == spec.replica_name
+        assert restored.settings == spec.settings
+
+    def test_to_dict_omits_defaults(self):
+        from dbwarden.schema.engine import ChEngineSpec
+        d = ChEngineSpec("MergeTree").to_dict()
+        assert "args" not in d
+        assert "zookeeper_path" not in d
+        assert "replica_name" not in d
+        assert "settings" not in d
+
+    def test_from_engine_string_simple(self):
+        from dbwarden.schema.engine import ChEngineSpec
+        spec = ChEngineSpec.from_engine_string("MergeTree")
+        assert spec.name == "MergeTree"
+        assert spec.args == ()
+
+    def test_from_engine_string_with_args(self):
+        from dbwarden.schema.engine import ChEngineSpec
+        spec = ChEngineSpec.from_engine_string("SummingMergeTree(col1, col2)")
+        assert spec.name == "SummingMergeTree"
+        assert spec.args == ("col1", "col2")
+
+    def test_from_engine_string_replicated(self):
+        from dbwarden.schema.engine import ChEngineSpec
+        spec = ChEngineSpec.from_engine_string(
+            "ReplicatedMergeTree('/zk/path', '{replica}', ver)")
+        assert spec.name == "ReplicatedMergeTree"
+        assert spec.zookeeper_path == "/zk/path"
+        assert spec.replica_name == "{replica}"
+        assert spec.args == ("ver",)
+
+    def test_post_init_coerces_string_to_tuple(self):
+        from dbwarden.schema.engine import ChEngineSpec
+        spec = ChEngineSpec("CollapsingMergeTree", args="sign")
+        assert spec.args == ("sign",)
+
+
+class TestProjectionSpec:
+    def test_basic_construction(self):
+        from dbwarden.schema.projection import ProjectionSpec
+        p = ProjectionSpec("by_date", "SELECT date, count() GROUP BY date")
+        assert p.name == "by_date"
+        assert p.query == "SELECT date, count() GROUP BY date"
+
+    def test_to_dict_roundtrip(self):
+        from dbwarden.schema.projection import ProjectionSpec
+        p = ProjectionSpec("by_date", "SELECT date, count() GROUP BY date")
+        d = p.to_dict()
+        restored = ProjectionSpec.from_dict(d)
+        assert restored.name == p.name
+        assert restored.query == p.query
+
+    def test_from_dict_with_empty_query(self):
+        from dbwarden.schema.projection import ProjectionSpec
+        p = ProjectionSpec.from_dict({"name": "by_date"})
+        assert p.name == "by_date"
+        assert p.query == ""

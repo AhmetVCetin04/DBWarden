@@ -25,8 +25,12 @@ def run_migration(
     from dbwarden.engine.file_parser import get_description_from_filename
 
     with get_db_connection(db_name) as connection:
-        # Use savepoint for all-or-nothing behavior
-        savepoint = connection.begin_nested()
+        # Use savepoint for all-or-nothing behavior (not supported by ClickHouse)
+        try:
+            savepoint = connection.begin_nested()
+            has_savepoint = True
+        except Exception:
+            has_savepoint = False
         try:
             for statement in sql_statements:
                 connection.execute(text(statement))
@@ -52,10 +56,11 @@ def run_migration(
                 )
 
             # All statements succeeded - commit the savepoint
-            savepoint.commit()
+            if has_savepoint:
+                savepoint.commit()
         except Exception:
-            # Any failure - rollback the savepoint
-            savepoint.rollback()
+            if has_savepoint:
+                savepoint.rollback()
             raise
 
 

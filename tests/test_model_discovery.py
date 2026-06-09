@@ -183,11 +183,11 @@ class TestModelTable:
         table = ModelTable(
             name="events",
             columns=columns,
-            clickhouse_options={"clickhouse_engine": "MergeTree"},
+            clickhouse_options={"ch_engine": "MergeTree"},
         )
 
         table_dict = table.to_dict()
-        assert table_dict["clickhouse_options"]["clickhouse_engine"] == "MergeTree"
+        assert table_dict["clickhouse_options"]["ch_engine"] == "MergeTree"
 
 
 class TestSQLGeneration:
@@ -238,12 +238,12 @@ class TestSQLGeneration:
             name="events",
             columns=columns,
             clickhouse_options={
-                "clickhouse_engine": ("ReplacingMergeTree", "version_column"),
-                "clickhouse_order_by": ["region", "event_time"],
-                "clickhouse_primary_key": "region",
-                "clickhouse_partition_by": "toYYYYMM(event_time)",
-                "clickhouse_sample_by": "intHash64(region)",
-                "clickhouse_ttl": ["event_time + INTERVAL 1 MONTH DELETE"],
+                "ch_engine": ("ReplacingMergeTree", "version_column"),
+                "ch_order_by": ["region", "event_time"],
+                "ch_primary_key": "region",
+                "ch_partition_by": "toYYYYMM(event_time)",
+                "ch_sample_by": "intHash64(region)",
+                "ch_ttl": ["event_time + INTERVAL 1 MONTH DELETE"],
             },
         )
 
@@ -268,8 +268,8 @@ class TestSQLGeneration:
             name="events",
             columns=columns,
             clickhouse_options={
-                "clickhouse_order_by": ["region", "event_time"],
-                "clickhouse_primary_key": ["region", "event_time"],
+                "ch_order_by": ["region", "event_time"],
+                "ch_primary_key": ["region", "event_time"],
             },
         )
 
@@ -302,8 +302,8 @@ class TestSQLGeneration:
             name="posts",
             columns=columns,
             clickhouse_options={
-                "clickhouse_order_by": ["author", "created_at"],
-                "clickhouse_projections": [
+                "ch_order_by": ["author", "created_at"],
+                "ch_projections": [
                     {"name": "by_author", "query": "SELECT * ORDER BY author"}
                 ],
             },
@@ -325,10 +325,9 @@ class TestSQLGeneration:
             name="mv_name",
             columns=columns,
             clickhouse_options={
-                "clickhouse_mv": True,
-                "clickhouse_mv_query": "SELECT group_col, count() AS total FROM source_table GROUP BY group_col",
-                "clickhouse_mv_engine": "SummingMergeTree",
-                "clickhouse_mv_order_by": ["group_col"],
+                "ch_select_statement": "SELECT group_col, count() AS total FROM source_table GROUP BY group_col",
+                "ch_engine": "SummingMergeTree",
+                "ch_order_by": ["group_col"],
             },
             object_type="materialized_view",
         )
@@ -361,10 +360,10 @@ class TestSQLGeneration:
             name="replicated_table",
             columns=columns,
             clickhouse_options={
-                "clickhouse_engine": "ReplicatedMergeTree",
-                "clickhouse_zookeeper_path": "'/clickhouse/tables/shard1'",
-                "clickhouse_replica_name": "'{replica}'",
-                "clickhouse_order_by": ["id"],
+                "ch_engine": "ReplicatedMergeTree",
+                "ch_zookeeper_path": "'/clickhouse/tables/shard1'",
+                "ch_replica_name": "'{replica}'",
+                "ch_order_by": ["id"],
             },
         )
 
@@ -379,10 +378,10 @@ class TestSQLGeneration:
             name="replicated_table",
             columns=[ModelColumn("id", "UInt64", False, True, False, None, None)],
             clickhouse_options={
-                "clickhouse_engine": ("ReplicatedReplacingMergeTree", "ver_col"),
-                "clickhouse_zookeeper_path": "'/zk/path'",
-                "clickhouse_replica_name": "'{replica}'",
-                "clickhouse_order_by": ["id"],
+                "ch_engine": ("ReplicatedReplacingMergeTree", "ver_col"),
+                "ch_zookeeper_path": "'/zk/path'",
+                "ch_replica_name": "'{replica}'",
+                "ch_order_by": ["id"],
             },
         )
 
@@ -402,11 +401,11 @@ class TestSQLGeneration:
             name="country_codes",
             columns=columns,
             clickhouse_options={
-                "clickhouse_dictionary": True,
-                "clickhouse_dict_layout": "FLAT()",
-                "clickhouse_dict_source": "CLICKHOUSE(HOST 'localhost' TABLE 'source')",
-                "clickhouse_dict_lifetime": "MIN 0 MAX 3600",
-                "clickhouse_dict_primary_key": "code",
+                "ch_dictionary": True,
+                "ch_dict_layout": "FLAT()",
+                "ch_dict_source": "CLICKHOUSE(HOST 'localhost' TABLE 'source')",
+                "ch_dict_lifetime": "MIN 0 MAX 3600",
+                "ch_dict_primary_key": "code",
             },
             object_type="dictionary",
         )
@@ -427,6 +426,27 @@ class TestSQLGeneration:
         )
 
         assert generate_drop_object_sql(table) == "DROP DICTIONARY country_codes"
+
+    def test_generate_clickhouse_create_table_sql_with_settings(self, monkeypatch):
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+
+        columns = [
+            ModelColumn("id", "UInt64", False, True, False, None, None),
+        ]
+
+        table = ModelTable(
+            name="events",
+            columns=columns,
+            clickhouse_options={
+                "ch_engine": "MergeTree",
+                "ch_order_by": ["id"],
+                "ch_settings": {"index_granularity": "8192", "min_rows_for_wide_part": "0"},
+            },
+        )
+
+        sql = generate_create_table_sql(table)
+
+        assert "SETTINGS index_granularity=8192, min_rows_for_wide_part=0" in sql
 
 
 class TestColumnExtraction:
@@ -506,7 +526,7 @@ class TestColumnExtraction:
             String,
             info={
                 "clickhouse_type": "LowCardinality(String)",
-                "clickhouse_codec": "ZSTD(3)",
+                "ch_codec": "ZSTD(3)",
             },
         )
 
@@ -515,6 +535,8 @@ class TestColumnExtraction:
         assert col is not None
         assert col.type == "LowCardinality(String)"
         assert col.codec == "ZSTD(3)"
+        assert col.ch_meta.get("ch_codec") == "ZSTD(3)"
+        assert col.ch_meta.get("ch_type") == "LowCardinality(String)"
 
     def test_extract_column_preserves_clickhouse_user_defined_type(self, monkeypatch):
         from sqlalchemy import Column
@@ -533,62 +555,72 @@ class TestColumnExtraction:
         assert col is not None
         assert col.type == "LowCardinality(String)"
 
-    def test_extract_table_from_model_uses_clickhouse_table_args(self, monkeypatch):
-        from sqlalchemy import Column, MetaData, String, Table
+
+class TestMetaBasedClickHouse:
+    """Tests for CH extraction via class Meta(CHTableMeta) — no __table_args__ fallback."""
+
+    def test_extract_table_from_model_uses_meta(self, monkeypatch):
+        from sqlalchemy import Column, Integer, String, MetaData, Table
+        from dbwarden.schema._base import DBWardenMeta
 
         monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
 
         class Event:
             __tablename__ = "events"
-            __table_args__ = {
-                "clickhouse_engine": "SummingMergeTree",
-                "clickhouse_order_by": ["region"],
-            }
             __table__ = Table(
                 "events",
                 MetaData(),
                 Column("region", String, primary_key=True),
             )
 
+        dw_meta = DBWardenMeta()
+        dw_meta.backend_table = {
+            "ch_engine": "SummingMergeTree",
+            "ch_order_by": ["region"],
+        }
+        Event.__dbwarden_meta__ = dw_meta
+        Event.__dbwarden_meta_applied__ = True
+
         table = extract_table_from_model(Event, db_name="primary")
 
         assert table is not None
-        assert table.clickhouse_options["clickhouse_engine"] == "SummingMergeTree"
-        assert table.clickhouse_options["clickhouse_order_by"] == ["region"]
+        assert table.clickhouse_options.get("ch_engine") == "SummingMergeTree"
+        assert table.clickhouse_options.get("ch_order_by") == ["region"]
 
-    def test_extract_table_from_model_sets_materialized_view_object_type(self, monkeypatch):
+    def test_extract_table_from_model_detects_materialized_view(self, monkeypatch):
         from sqlalchemy import Column, MetaData, String, Table
+        from dbwarden.schema._base import DBWardenMeta
 
         monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
 
         class EventView:
             __tablename__ = "mv_name"
-            __table_args__ = {
-                "clickhouse_mv": True,
-                "clickhouse_mv_query": "SELECT region FROM source_table",
-            }
             __table__ = Table(
                 "mv_name",
                 MetaData(),
                 Column("region", String, primary_key=True),
             )
 
+        dw_meta = DBWardenMeta()
+        dw_meta.backend_table = {
+            "ch_select_statement": "SELECT region FROM source_table",
+        }
+        EventView.__dbwarden_meta__ = dw_meta
+        EventView.__dbwarden_meta_applied__ = True
+
         table = extract_table_from_model(EventView, db_name="primary")
 
         assert table is not None
         assert table.object_type == "materialized_view"
 
-    def test_extract_table_from_model_rejects_invalid_clickhouse_primary_key_prefix(self, monkeypatch):
+    def test_extract_table_from_model_rejects_invalid_primary_key_prefix(self, monkeypatch):
         from sqlalchemy import Column, MetaData, String, Table
+        from dbwarden.schema._base import DBWardenMeta
 
         monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
 
         class Event:
             __tablename__ = "events"
-            __table_args__ = {
-                "clickhouse_order_by": ["region", "event_time"],
-                "clickhouse_primary_key": ["event_time"],
-            }
             __table__ = Table(
                 "events",
                 MetaData(),
@@ -596,6 +628,204 @@ class TestColumnExtraction:
                 Column("event_time", String),
             )
 
+        dw_meta = DBWardenMeta()
+        dw_meta.backend_table = {
+            "ch_order_by": ["region", "event_time"],
+            "ch_primary_key": ["event_time"],
+        }
+        Event.__dbwarden_meta__ = dw_meta
+        Event.__dbwarden_meta_applied__ = True
+
         table = extract_table_from_model(Event, db_name="primary")
 
         assert table is None
+
+
+class TestClickHouseTypeMapping:
+    def test_clickhouse_type_extraction_from_info(self, monkeypatch):
+        """CH type hints in column.info are extracted correctly."""
+        from sqlalchemy import Column, String
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+        col_obj = Column(
+            "payload",
+            String,
+            info={"clickhouse_type": "LowCardinality(String)"},
+        )
+        col = extract_column_info(col_obj)
+        assert col.type == "LowCardinality(String)"
+
+    def test_extract_column_ch_meta_info(self, monkeypatch):
+        from sqlalchemy import Column, String
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+        col_obj = Column(
+            "payload",
+            String,
+            info={
+                "ch_codec": "ZSTD(3)",
+                "ch_type": "LowCardinality(String)",
+            },
+        )
+        col = extract_column_info(col_obj)
+        assert col.ch_meta.get("ch_codec") == "ZSTD(3)"
+        assert col.ch_meta.get("ch_type") == "LowCardinality(String)"
+
+    def test_model_column_ch_type_hints(self):
+        col = ModelColumn(
+            name="payload",
+            type="String",
+            nullable=False,
+            primary_key=False,
+            unique=False,
+            default=None,
+            foreign_key=None,
+        )
+        col.ch_meta = {"ch_codec": "ZSTD(3)"}
+        d = col.to_dict()
+        assert d.get("ch_meta") == {"ch_codec": "ZSTD(3)"}
+
+    def test_model_column_to_dict_with_ch_meta(self):
+        col = ModelColumn(
+            name="payload",
+            type="String",
+            nullable=False,
+            primary_key=False,
+            unique=False,
+            default=None,
+            foreign_key=None,
+        )
+        col.ch_meta = {"ch_codec": "ZSTD(3)", "ch_default": "now()"}
+        d = col.to_dict()
+        assert d["ch_meta"] == {"ch_codec": "ZSTD(3)", "ch_default": "now()"}
+
+    def test_engine_spec_from_engine_string(self):
+        from dbwarden.schema.engine import ChEngineSpec
+        spec = ChEngineSpec.from_engine_string("ReplicatedMergeTree('/clickhouse/tables/{shard}', '{replica}')")
+        assert spec.name == "ReplicatedMergeTree"
+        assert len(spec.args) == 0  # zk_path and replica extracted separately
+        assert spec.zookeeper_path == "/clickhouse/tables/{shard}"
+        assert spec.replica_name == "{replica}"
+
+    def test_engine_spec_from_engine_string_no_params(self):
+        from dbwarden.schema.engine import ChEngineSpec
+        spec = ChEngineSpec.from_engine_string("MergeTree")
+        assert spec.name == "MergeTree"
+        assert spec.args == ()
+
+    def test_engine_spec_from_engine_string_with_args(self):
+        from dbwarden.schema.engine import ChEngineSpec
+        spec = ChEngineSpec.from_engine_string("Distributed('my_cluster', 'default', 'hits')")
+        assert spec.name == "Distributed"
+        assert spec.args == ("'my_cluster'", "'default'", "'hits'")
+
+
+class TestChTypeMapper:
+    def test_map_sa_integer_types(self):
+        from dbwarden.engine.model_discovery import _render_ch_type_from_sa
+        from sqlalchemy import Integer, BigInteger, SmallInteger
+        assert _render_ch_type_from_sa(Integer(), "INTEGER") == "Int32"
+        assert _render_ch_type_from_sa(BigInteger(), "BIGINT") == "Int64"
+        assert _render_ch_type_from_sa(SmallInteger(), "SMALLINT") == "Int16"
+
+    def test_map_sa_string_types(self):
+        from dbwarden.engine.model_discovery import _render_ch_type_from_sa
+        from sqlalchemy import String, Text, VARCHAR
+        assert _render_ch_type_from_sa(String(255), "VARCHAR(255)") == "String"
+        assert _render_ch_type_from_sa(Text(), "TEXT") == "String"
+
+    def test_map_sa_float_types(self):
+        from dbwarden.engine.model_discovery import _render_ch_type_from_sa
+        from sqlalchemy import Float, REAL
+        assert _render_ch_type_from_sa(Float(precision=24), "FLOAT(24)") == "Float32"
+        assert _render_ch_type_from_sa(Float(precision=53), "FLOAT(53)") == "Float64"
+        # REAL has no precision attr → defaults to Float64
+        assert _render_ch_type_from_sa(Float(), "FLOAT") == "Float64"
+
+    def test_map_sa_numeric_to_decimal(self):
+        from dbwarden.engine.model_discovery import _render_ch_type_from_sa
+        from sqlalchemy import Numeric
+        assert _render_ch_type_from_sa(Numeric(10, 2), "NUMERIC(10, 2)") == "Decimal(10, 2)"
+        assert _render_ch_type_from_sa(Numeric(), "NUMERIC") == "Decimal(38, 0)"
+
+    def test_map_sa_boolean(self):
+        from dbwarden.engine.model_discovery import _render_ch_type_from_sa
+        from sqlalchemy import Boolean
+        assert _render_ch_type_from_sa(Boolean(), "BOOLEAN") == "Bool"
+
+    def test_map_sa_date_time(self):
+        from dbwarden.engine.model_discovery import _render_ch_type_from_sa
+        from sqlalchemy import DateTime, Date
+        assert _render_ch_type_from_sa(Date(), "DATE") == "Date"
+        assert _render_ch_type_from_sa(DateTime(), "DATETIME") == "DateTime"
+        # Timezone-aware → DateTime64(3)
+        assert _render_ch_type_from_sa(DateTime(timezone=True), "DATETIME") == "DateTime64(3)"
+
+    def test_map_sa_array(self):
+        from dbwarden.engine.model_discovery import _render_ch_type_from_sa
+        from sqlalchemy import ARRAY, String
+        arr = ARRAY(String(255))
+        result = _render_ch_type_from_sa(arr, "VARCHAR(255)[]")
+        assert result == "Array(String)"
+
+    def test_map_sa_binary(self):
+        from dbwarden.engine.model_discovery import _render_ch_type_from_sa
+        from sqlalchemy import LargeBinary
+        assert _render_ch_type_from_sa(LargeBinary(), "BLOB") == "String"
+
+    def test_map_sa_uuid(self):
+        from dbwarden.engine.model_discovery import _render_ch_type_from_sa
+        from sqlalchemy.dialects.postgresql import UUID
+        assert _render_ch_type_from_sa(UUID(), "UUID") == "UUID"
+
+    def test_map_sa_json(self):
+        from dbwarden.engine.model_discovery import _render_ch_type_from_sa
+        from sqlalchemy import JSON
+        assert _render_ch_type_from_sa(JSON(), "JSON") == "JSON"
+
+    def test_map_sa_enum_small(self):
+        from dbwarden.engine.model_discovery import _render_ch_type_from_sa
+        import enum
+        from sqlalchemy import Enum as SAEnum
+        small_enum = SAEnum("red", "green", "blue", name="color")
+        result = _render_ch_type_from_sa(small_enum, "ENUM")
+        assert result.startswith("Enum8(")
+        assert "'red'" in result
+        assert "'green'" in result
+
+    def test_map_sa_enum_large(self):
+        from dbwarden.engine.model_discovery import _render_ch_type_from_sa
+        from sqlalchemy import Enum as SAEnum
+        values = [str(i) for i in range(200)]
+        large_enum = SAEnum(*values, name="big")
+        result = _render_ch_type_from_sa(large_enum, "ENUM")
+        assert result.startswith("Enum16(")
+
+    def test_map_sa_time_and_interval_fallback(self):
+        from dbwarden.engine.model_discovery import _render_ch_type_from_sa
+        from sqlalchemy import Time, Interval
+        assert _render_ch_type_from_sa(Time(), "TIME") == "String"
+        assert _render_ch_type_from_sa(Interval(), "INTERVAL") == "String"
+
+
+class TestChTypeMapperWithInfo:
+    def test_map_sa_type_with_low_cardinality(self, monkeypatch):
+        from dbwarden.engine.model_discovery import _map_sa_type_to_clickhouse
+        from sqlalchemy import Column, String
+        monkeypatch.setattr("dbwarden.engine.model_discovery._get_backend_name", lambda db_name=None: "clickhouse")
+        col = Column("name", String(255), info={"ch_low_cardinality": True})
+        assert _map_sa_type_to_clickhouse(col) == "LowCardinality(String)"
+
+    def test_map_sa_type_with_nullable(self, monkeypatch):
+        from dbwarden.engine.model_discovery import _map_sa_type_to_clickhouse
+        from sqlalchemy import Column, Integer
+        monkeypatch.setattr("dbwarden.engine.model_discovery._get_backend_name", lambda db_name=None: "clickhouse")
+        col = Column("age", Integer, info={"ch_nullable": True})
+        assert _map_sa_type_to_clickhouse(col) == "Nullable(Int32)"
+
+    def test_map_sa_type_with_both_wrappers(self, monkeypatch):
+        from dbwarden.engine.model_discovery import _map_sa_type_to_clickhouse
+        from sqlalchemy import Column, String
+        monkeypatch.setattr("dbwarden.engine.model_discovery._get_backend_name", lambda db_name=None: "clickhouse")
+        col = Column("name", String(255), info={"ch_low_cardinality": True, "ch_nullable": True})
+        result = _map_sa_type_to_clickhouse(col)
+        # LowCardinality wraps first, then Nullable wraps outside
+        assert result == "Nullable(LowCardinality(String))"

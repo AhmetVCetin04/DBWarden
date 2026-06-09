@@ -299,3 +299,165 @@ def test_generate_models_with_tables_filter():
             assert "posts" not in content.lower() or "Posts" not in content
         finally:
             os.chdir(old_cwd)
+
+
+class TestClickHouseGenerateModels:
+    def test_render_ch_meta_simple(self):
+        from dbwarden.commands.generate_models import _render_ch_meta
+        meta_lines = _render_ch_meta(
+            columns=[],
+            options={"ch_engine": "MergeTree", "ch_order_by": ["id"]},
+            object_type="table",
+        )
+        assert any("ch_engine = 'MergeTree'" in line for line in meta_lines)
+        assert any("ch_order_by = ['id']" in line for line in meta_lines)
+
+    def test_render_ch_meta_with_ch_settings(self):
+        from dbwarden.commands.generate_models import _render_ch_meta
+        meta_lines = _render_ch_meta(
+            columns=[],
+            options={"ch_engine": "MergeTree", "ch_order_by": ["id"], "ch_settings": {"allow_nullable_key": 1}},
+            object_type="table",
+        )
+        assert any("ch_settings = {'allow_nullable_key': 1}" in line for line in meta_lines)
+
+    def test_render_ch_meta_with_engine_spec(self):
+        from dbwarden.commands.generate_models import _render_ch_meta
+        from dbwarden.schema.engine import ChEngineSpec
+        engine = ChEngineSpec(name="ReplicatedMergeTree", args=("/zk/path", "{replica}"))
+        meta_lines = _render_ch_meta(
+            columns=[],
+            options={"ch_engine_raw": engine, "ch_order_by": ["id"]},
+            object_type="table",
+        )
+        assert any("ch_engine = ChEngineSpec(" in line for line in meta_lines)
+        assert any("ReplicatedMergeTree" in line for line in meta_lines)
+
+    def test_generate_table_code_clickhouse_engine(self):
+        columns = [
+            {"name": "id", "type": "UInt64", "nullable": False, "default": None, "primary_key": True, "unique": False, "foreign_key": None},
+            {"name": "name", "type": "String", "nullable": True, "default": None, "primary_key": False, "unique": False, "foreign_key": None},
+        ]
+        code = _generate_table_code(
+            "events",
+            columns,
+            object_type="table",
+            clickhouse_options={
+                "ch_engine": "MergeTree",
+                "ch_order_by": ["id"],
+            },
+        )
+        assert "class Events(Base):" in code
+        assert "__tablename__ = 'events'" in code
+        assert "class Meta(CHTableMeta):" in code
+        assert "ch_engine = 'MergeTree'" in code
+
+    def test_generate_table_code_clickhouse_column_ch_meta(self):
+        columns = [
+            {"name": "id", "type": "UInt64", "nullable": False, "default": None, "primary_key": True, "unique": False, "foreign_key": None},
+            {
+                "name": "payload",
+                "type": "String",
+                "nullable": True,
+                "default": None,
+                "primary_key": False,
+                "unique": False,
+                "foreign_key": None,
+                "ch_meta": {"ch_codec": "ZSTD(3)", "ch_type": "String"},
+            },
+        ]
+        code = _generate_table_code(
+            "events",
+            columns,
+            object_type="table",
+            clickhouse_options={
+                "ch_engine": "MergeTree",
+                "ch_order_by": ["id"],
+            },
+        )
+        assert "ch_codec = 'ZSTD(3)'" in code
+
+    def test_parse_clickhouse_nullable_type(self):
+        assert _parse_type("Nullable(String)") == "String"
+        assert _parse_type("Nullable(Int32)") == "Integer"
+
+    def test_generate_table_code_clickhouse_high_precision_datetime(self):
+        columns = [
+            {"name": "id", "type": "UInt64", "nullable": False, "default": None, "primary_key": True, "unique": False, "foreign_key": None},
+            {"name": "ts", "type": "DateTime64(3)", "nullable": False, "default": None, "primary_key": False, "unique": False, "foreign_key": None},
+        ]
+        code = _generate_table_code(
+            "events",
+            columns,
+            object_type="table",
+        )
+        assert "DateTime" in code
+
+    def test_parse_clickhouse_types_extra(self):
+        assert _parse_type("Int8", dialect="clickhouse") == "SmallInteger"
+        assert _parse_type("Int16", dialect="clickhouse") == "SmallInteger"
+        assert _parse_type("Int64", dialect="clickhouse") == "BigInteger"
+        assert _parse_type("Float32", dialect="clickhouse") == "Float"
+        assert _parse_type("String", dialect="clickhouse") == "String"
+        assert _parse_type("Date", dialect="clickhouse") == "Date"
+        assert _parse_type("DateTime", dialect="clickhouse") == "DateTime"
+
+    def test_write_models_clickhouse_emits_meta_imports(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            from dbwarden.commands.generate_models import _write_models
+
+            tables = [
+                {
+                    "name": "events",
+                    "columns": [
+                        {"name": "id", "type": "UInt64", "nullable": False, "default": None, "primary_key": True, "unique": False, "foreign_key": None, "autoincrement": False},
+                    ],
+                    "clickhouse_options": {"ch_engine": "MergeTree", "ch_order_by": ["id"]},
+                    "object_type": "table",
+                }
+            ]
+            _write_models(tmpdir, tables, single_file=True)
+            content = Path(tmpdir, "models.py").read_text()
+            assert "CHColumnMeta" in content
+            assert "CHTableMeta" in content
+            assert "from dbwarden import CHColumnMeta, CHTableMeta" in content
+
+    def test_write_models_clickhouse_ch_engine_spec_import(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            from dbwarden.commands.generate_models import _write_models
+            from dbwarden.schema.engine import ChEngineSpec
+
+            tables = [
+                {
+                    "name": "events",
+                    "columns": [
+                        {"name": "id", "type": "UInt64", "nullable": False, "default": None, "primary_key": True, "unique": False, "foreign_key": None, "autoincrement": False},
+                    ],
+                    "clickhouse_options": {"ch_engine_raw": ChEngineSpec("MergeTree"), "ch_order_by": ["id"]},
+                    "object_type": "table",
+                }
+            ]
+            _write_models(tmpdir, tables, single_file=True)
+            content = Path(tmpdir, "models.py").read_text()
+            assert "ChEngineSpec" in content
+            assert "from dbwarden import CHColumnMeta, CHTableMeta, ChEngineSpec" in content
+
+    def test_generate_table_code_ch_materialized_view(self):
+        columns = [
+            {"name": "group_col", "type": "String", "nullable": False, "default": None, "primary_key": False, "unique": False, "foreign_key": None},
+            {"name": "total", "type": "UInt64", "nullable": False, "default": None, "primary_key": False, "unique": False, "foreign_key": None},
+        ]
+        code = _generate_table_code(
+            "mv_name",
+            columns,
+            object_type="materialized_view",
+            clickhouse_options={
+                "ch_object_type": "materialized_view",
+                "ch_select_statement": "SELECT group_col, count() AS total FROM source GROUP BY group_col",
+                "ch_engine": "SummingMergeTree",
+                "ch_order_by": ["group_col"],
+            },
+        )
+        assert "class MvName(Base):" in code
+        assert "ch_select_statement" in code
+        assert "__tablename__ = 'mv_name'" in code

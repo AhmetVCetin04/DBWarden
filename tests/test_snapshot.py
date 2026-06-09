@@ -1831,3 +1831,157 @@ class TestIndexDiff:
         upgrade, _ = diff_models_against_snapshot(model_tables, snapshot)
         assert any(op["type"] == "drop_index" for op in upgrade)
         assert any(op["type"] == "add_index" for op in upgrade)
+
+
+class TestClickHouseDiff:
+    def test_diff_models_detects_clickhouse_option_change(self):
+        model_tables = [
+            ModelTable(
+                name="events",
+                columns=[
+                    ModelColumn("id", "UInt64", False, True, False, None, None, ch_meta={"ch_type": "UInt64"}),
+                ],
+                clickhouse_options={
+                    "ch_engine": "MergeTree",
+                    "ch_order_by": ["id"],
+                },
+            )
+        ]
+        snapshot = {
+            "tables": {
+                "events": {
+                    "object_type": "table",
+                    "columns": {
+                        "id": {
+                            "type": "UInt64",
+                            "nullable": False,
+                            "default": None,
+                            "ch_column": {"ch_type": "UInt64"},
+                        }
+                    },
+                    "clickhouse_options": {
+                        "ch_engine": "ReplacingMergeTree",
+                        "ch_order_by": ["id"],
+                    },
+                    "indexes": {},
+                }
+            },
+            "indexes": {},
+            "constraints": {},
+        }
+
+        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot)
+
+        assert any(op["type"] == "alter_ch_options" for op in upgrade)
+        assert any(op["type"] == "alter_ch_options" for op in rollback)
+
+    def test_snapshot_diff_to_sql_clickhouse_ch_ops(self, monkeypatch):
+        monkeypatch.setattr("dbwarden.engine.snapshot._get_backend", lambda db_name=None: "clickhouse")
+
+        ops = [
+            {
+                "type": "alter_ch_options",
+                "table": "events",
+                "changes": {"ch_ttl": {"from": ["old_ttl"], "to": ["new_ttl"]}},
+            },
+            {
+                "type": "alter_ch_column",
+                "table": "events",
+                "column": "payload",
+                "from_ch_column": {"ch_type": "String"},
+                "to_ch_column": {"ch_type": "LowCardinality(String)", "ch_codec": "ZSTD(3)"},
+            },
+            {
+                "type": "drop_table",
+                "table": "dict_events",
+                "object_type": "dictionary",
+            },
+        ]
+
+        sql, rollback_sql, changes = snapshot_diff_to_sql(ops, [], db_name="clickhouse")
+
+        assert "ALTER TABLE events MODIFY TTL new_ttl" in sql
+        assert "ALTER TABLE events MODIFY COLUMN payload LowCardinality(String)" in sql
+        assert "DROP DICTIONARY dict_events" in sql
+        assert changes
+
+    def test_snapshot_parse_clickhouse_settings(self):
+        from dbwarden.engine.snapshot import _parse_clickhouse_settings
+        result = _parse_clickhouse_settings("CREATE TABLE t (id UInt64) ENGINE = MergeTree() ORDER BY id SETTINGS index_granularity=8192, min_rows_for_wide_part=0")
+        assert result == {"index_granularity": "8192", "min_rows_for_wide_part": "0"}
+        assert _parse_clickhouse_settings("CREATE TABLE t (id UInt64) ENGINE = MergeTree() ORDER BY id") is None
+
+    def test_snapshot_parse_clickhouse_ttl_expressions(self):
+        from dbwarden.engine.snapshot import _parse_clickhouse_ttl_expressions
+        result = _parse_clickhouse_ttl_expressions(
+            "CREATE TABLE t (id UInt64) ENGINE = MergeTree() ORDER BY id TTL created_at + INTERVAL 30 DAY"
+        )
+        assert "created_at + INTERVAL 30 DAY" in result
+        assert _parse_clickhouse_ttl_expressions("CREATE TABLE t (id UInt64) ENGINE = MergeTree() ORDER BY id") == []
+
+    def test_snapshot_parse_clickhouse_projection_names(self):
+        from dbwarden.engine.snapshot import _parse_clickhouse_projection_names
+        result = _parse_clickhouse_projection_names(
+            "CREATE TABLE t (id UInt64) ENGINE = MergeTree() ORDER BY id PROJECTION p1 (SELECT * ORDER BY id)"
+        )
+        assert "p1" in result
+
+    def test_snapshot_parse_clickhouse_mv_query(self):
+        from dbwarden.engine.snapshot import _parse_clickhouse_mv_query
+        result = _parse_clickhouse_mv_query(
+            "CREATE MATERIALIZED VIEW mv ENGINE = MergeTree() AS SELECT id FROM source"
+        )
+        assert result == "SELECT id FROM source"
+        assert _parse_clickhouse_mv_query("CREATE TABLE t (id UInt64) ENGINE = MergeTree()") is None
+
+    def test_snapshot_parse_clickhouse_zookeeper_path(self):
+        from dbwarden.engine.snapshot import _parse_clickhouse_zookeeper_path
+        result = _parse_clickhouse_zookeeper_path(
+            "CREATE TABLE t (id UInt64) ENGINE = ReplicatedMergeTree('/zk/path', '{replica}') ORDER BY id", "ReplicatedMergeTree"
+        )
+        assert result == "'/zk/path'"
+
+    def test_snapshot_parse_clickhouse_dict_layout(self):
+        from dbwarden.engine.snapshot import _parse_clickhouse_dict_layout
+        result = _parse_clickhouse_dict_layout(
+            "CREATE DICTIONARY d (id UInt64) PRIMARY KEY id SOURCE(CLICKHOUSE()) LIFETIME(300) LAYOUT(FLAT())"
+        )
+        assert result is not None
+        assert "FLAT" in result
+        assert _parse_clickhouse_dict_layout("CREATE TABLE t (id UInt64) ENGINE = MergeTree()") is None
+
+    def test_snapshot_parse_clickhouse_dict_source(self):
+        from dbwarden.engine.snapshot import _parse_clickhouse_dict_source
+        result = _parse_clickhouse_dict_source(
+            "CREATE DICTIONARY d (id UInt64) PRIMARY KEY id SOURCE(CLICKHOUSE(HOST 'localhost')) LIFETIME(300) LAYOUT(FLAT())"
+        )
+        assert result is not None
+        assert "CLICKHOUSE(HOST 'localhost'" in result
+
+    def test_snapshot_parse_clickhouse_dict_lifetime(self):
+        from dbwarden.engine.snapshot import _parse_clickhouse_dict_lifetime
+        result = _parse_clickhouse_dict_lifetime(
+            "CREATE DICTIONARY d (id UInt64) PRIMARY KEY id SOURCE(CLICKHOUSE()) LIFETIME(300) LAYOUT(FLAT())"
+        )
+        assert result == 300
+        assert _parse_clickhouse_dict_lifetime("CREATE TABLE t (id UInt64) ENGINE = MergeTree()") is None
+
+    def test_snapshot_parse_clickhouse_dict_primary_key(self):
+        from dbwarden.engine.snapshot import _parse_clickhouse_dict_primary_key
+        result = _parse_clickhouse_dict_primary_key(
+            "CREATE DICTIONARY d (id UInt64, name String) PRIMARY KEY id SOURCE(CLICKHOUSE()) LIFETIME(300) LAYOUT(FLAT())"
+        )
+        assert result is not None
+        assert result.startswith("id")
+
+    def test_diff_models_ch_add_table(self):
+        model_tables = [
+            ModelTable(
+                name="events",
+                columns=[ModelColumn("id", "UInt64", False, True, False, None, None)],
+                clickhouse_options={"ch_engine": "MergeTree", "ch_order_by": ["id"]},
+            )
+        ]
+        upgrade, rollback = diff_models_against_snapshot(model_tables, {"tables": {}, "indexes": {}, "constraints": {}})
+        create_ops = [op for op in upgrade if op["type"] == "create_table"]
+        assert len(create_ops) == 1
