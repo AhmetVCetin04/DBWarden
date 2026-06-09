@@ -639,3 +639,193 @@ class TestMetaBasedClickHouse:
         table = extract_table_from_model(Event, db_name="primary")
 
         assert table is None
+
+
+class TestClickHouseTypeMapping:
+    def test_clickhouse_type_extraction_from_info(self, monkeypatch):
+        """CH type hints in column.info are extracted correctly."""
+        from sqlalchemy import Column, String
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+        col_obj = Column(
+            "payload",
+            String,
+            info={"clickhouse_type": "LowCardinality(String)"},
+        )
+        col = extract_column_info(col_obj)
+        assert col.type == "LowCardinality(String)"
+
+    def test_extract_column_ch_meta_info(self, monkeypatch):
+        from sqlalchemy import Column, String
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+        col_obj = Column(
+            "payload",
+            String,
+            info={
+                "ch_codec": "ZSTD(3)",
+                "ch_type": "LowCardinality(String)",
+            },
+        )
+        col = extract_column_info(col_obj)
+        assert col.ch_meta.get("ch_codec") == "ZSTD(3)"
+        assert col.ch_meta.get("ch_type") == "LowCardinality(String)"
+
+    def test_model_column_ch_type_hints(self):
+        col = ModelColumn(
+            name="payload",
+            type="String",
+            nullable=False,
+            primary_key=False,
+            unique=False,
+            default=None,
+            foreign_key=None,
+        )
+        col.ch_meta = {"ch_codec": "ZSTD(3)"}
+        d = col.to_dict()
+        assert d.get("ch_meta") == {"ch_codec": "ZSTD(3)"}
+
+    def test_model_column_to_dict_with_ch_meta(self):
+        col = ModelColumn(
+            name="payload",
+            type="String",
+            nullable=False,
+            primary_key=False,
+            unique=False,
+            default=None,
+            foreign_key=None,
+        )
+        col.ch_meta = {"ch_codec": "ZSTD(3)", "ch_default": "now()"}
+        d = col.to_dict()
+        assert d["ch_meta"] == {"ch_codec": "ZSTD(3)", "ch_default": "now()"}
+
+    def test_engine_spec_from_engine_string(self):
+        from dbwarden.schema.engine import ChEngineSpec
+        spec = ChEngineSpec.from_engine_string("ReplicatedMergeTree('/clickhouse/tables/{shard}', '{replica}')")
+        assert spec.name == "ReplicatedMergeTree"
+        assert len(spec.args) == 0  # zk_path and replica extracted separately
+        assert spec.zookeeper_path == "/clickhouse/tables/{shard}"
+        assert spec.replica_name == "{replica}"
+
+    def test_engine_spec_from_engine_string_no_params(self):
+        from dbwarden.schema.engine import ChEngineSpec
+        spec = ChEngineSpec.from_engine_string("MergeTree")
+        assert spec.name == "MergeTree"
+        assert spec.args == ()
+
+    def test_engine_spec_from_engine_string_with_args(self):
+        from dbwarden.schema.engine import ChEngineSpec
+        spec = ChEngineSpec.from_engine_string("Distributed('my_cluster', 'default', 'hits')")
+        assert spec.name == "Distributed"
+        assert spec.args == ("'my_cluster'", "'default'", "'hits'")
+
+
+class TestChTypeMapper:
+    def test_map_sa_integer_types(self):
+        from dbwarden.engine.model_discovery import _render_ch_type_from_sa
+        from sqlalchemy import Integer, BigInteger, SmallInteger
+        assert _render_ch_type_from_sa(Integer(), "INTEGER") == "Int32"
+        assert _render_ch_type_from_sa(BigInteger(), "BIGINT") == "Int64"
+        assert _render_ch_type_from_sa(SmallInteger(), "SMALLINT") == "Int16"
+
+    def test_map_sa_string_types(self):
+        from dbwarden.engine.model_discovery import _render_ch_type_from_sa
+        from sqlalchemy import String, Text, VARCHAR
+        assert _render_ch_type_from_sa(String(255), "VARCHAR(255)") == "String"
+        assert _render_ch_type_from_sa(Text(), "TEXT") == "String"
+
+    def test_map_sa_float_types(self):
+        from dbwarden.engine.model_discovery import _render_ch_type_from_sa
+        from sqlalchemy import Float, REAL
+        assert _render_ch_type_from_sa(Float(precision=24), "FLOAT(24)") == "Float32"
+        assert _render_ch_type_from_sa(Float(precision=53), "FLOAT(53)") == "Float64"
+        # REAL has no precision attr → defaults to Float64
+        assert _render_ch_type_from_sa(Float(), "FLOAT") == "Float64"
+
+    def test_map_sa_numeric_to_decimal(self):
+        from dbwarden.engine.model_discovery import _render_ch_type_from_sa
+        from sqlalchemy import Numeric
+        assert _render_ch_type_from_sa(Numeric(10, 2), "NUMERIC(10, 2)") == "Decimal(10, 2)"
+        assert _render_ch_type_from_sa(Numeric(), "NUMERIC") == "Decimal(38, 0)"
+
+    def test_map_sa_boolean(self):
+        from dbwarden.engine.model_discovery import _render_ch_type_from_sa
+        from sqlalchemy import Boolean
+        assert _render_ch_type_from_sa(Boolean(), "BOOLEAN") == "Bool"
+
+    def test_map_sa_date_time(self):
+        from dbwarden.engine.model_discovery import _render_ch_type_from_sa
+        from sqlalchemy import DateTime, Date
+        assert _render_ch_type_from_sa(Date(), "DATE") == "Date"
+        assert _render_ch_type_from_sa(DateTime(), "DATETIME") == "DateTime"
+        # Timezone-aware → DateTime64(3)
+        assert _render_ch_type_from_sa(DateTime(timezone=True), "DATETIME") == "DateTime64(3)"
+
+    def test_map_sa_array(self):
+        from dbwarden.engine.model_discovery import _render_ch_type_from_sa
+        from sqlalchemy import ARRAY, String
+        arr = ARRAY(String(255))
+        result = _render_ch_type_from_sa(arr, "VARCHAR(255)[]")
+        assert result == "Array(String)"
+
+    def test_map_sa_binary(self):
+        from dbwarden.engine.model_discovery import _render_ch_type_from_sa
+        from sqlalchemy import LargeBinary
+        assert _render_ch_type_from_sa(LargeBinary(), "BLOB") == "String"
+
+    def test_map_sa_uuid(self):
+        from dbwarden.engine.model_discovery import _render_ch_type_from_sa
+        from sqlalchemy.dialects.postgresql import UUID
+        assert _render_ch_type_from_sa(UUID(), "UUID") == "UUID"
+
+    def test_map_sa_json(self):
+        from dbwarden.engine.model_discovery import _render_ch_type_from_sa
+        from sqlalchemy import JSON
+        assert _render_ch_type_from_sa(JSON(), "JSON") == "JSON"
+
+    def test_map_sa_enum_small(self):
+        from dbwarden.engine.model_discovery import _render_ch_type_from_sa
+        import enum
+        from sqlalchemy import Enum as SAEnum
+        small_enum = SAEnum("red", "green", "blue", name="color")
+        result = _render_ch_type_from_sa(small_enum, "ENUM")
+        assert result.startswith("Enum8(")
+        assert "'red'" in result
+        assert "'green'" in result
+
+    def test_map_sa_enum_large(self):
+        from dbwarden.engine.model_discovery import _render_ch_type_from_sa
+        from sqlalchemy import Enum as SAEnum
+        values = [str(i) for i in range(200)]
+        large_enum = SAEnum(*values, name="big")
+        result = _render_ch_type_from_sa(large_enum, "ENUM")
+        assert result.startswith("Enum16(")
+
+    def test_map_sa_time_and_interval_fallback(self):
+        from dbwarden.engine.model_discovery import _render_ch_type_from_sa
+        from sqlalchemy import Time, Interval
+        assert _render_ch_type_from_sa(Time(), "TIME") == "String"
+        assert _render_ch_type_from_sa(Interval(), "INTERVAL") == "String"
+
+
+class TestChTypeMapperWithInfo:
+    def test_map_sa_type_with_low_cardinality(self, monkeypatch):
+        from dbwarden.engine.model_discovery import _map_sa_type_to_clickhouse
+        from sqlalchemy import Column, String
+        monkeypatch.setattr("dbwarden.engine.model_discovery._get_backend_name", lambda db_name=None: "clickhouse")
+        col = Column("name", String(255), info={"ch_low_cardinality": True})
+        assert _map_sa_type_to_clickhouse(col) == "LowCardinality(String)"
+
+    def test_map_sa_type_with_nullable(self, monkeypatch):
+        from dbwarden.engine.model_discovery import _map_sa_type_to_clickhouse
+        from sqlalchemy import Column, Integer
+        monkeypatch.setattr("dbwarden.engine.model_discovery._get_backend_name", lambda db_name=None: "clickhouse")
+        col = Column("age", Integer, info={"ch_nullable": True})
+        assert _map_sa_type_to_clickhouse(col) == "Nullable(Int32)"
+
+    def test_map_sa_type_with_both_wrappers(self, monkeypatch):
+        from dbwarden.engine.model_discovery import _map_sa_type_to_clickhouse
+        from sqlalchemy import Column, String
+        monkeypatch.setattr("dbwarden.engine.model_discovery._get_backend_name", lambda db_name=None: "clickhouse")
+        col = Column("name", String(255), info={"ch_low_cardinality": True, "ch_nullable": True})
+        result = _map_sa_type_to_clickhouse(col)
+        # LowCardinality wraps first, then Nullable wraps outside
+        assert result == "Nullable(LowCardinality(String))"

@@ -319,3 +319,93 @@ def test_analyze_schema_dictionary_source_change_is_warning():
     assert len(source_issues) == 1
     assert source_issues[0].severity == "WARNING"
     assert source_issues[0].required_flag == "--force"
+
+
+def test_ch_engine_change_raises_safety_issue():
+    """Changes to ch_engine should raise a safety warning."""
+    model_tables = [
+        ModelTable(
+            name="events",
+            columns=[ModelColumn("id", "UInt64", False, True, False, None, None)],
+            clickhouse_options={"ch_engine": "ReplacingMergeTree"},
+        )
+    ]
+    snapshot = {
+        "events": {
+            "columns": {"id": {"type": "UInt64", "nullable": False, "default": None, "ch_column": {"ch_type": "UInt64"}}},
+            "clickhouse_options": {"ch_engine": "MergeTree"},
+            "object_type": "table",
+            "indexes": {},
+        }
+    }
+    issues = analyze_schema(model_tables, snapshot)
+    engine_issues = [i for i in issues if i.change_type == "clickhouse_engine"]
+    assert len(engine_issues) > 0
+
+
+def test_ch_order_by_change_raises_safety_issue():
+    model_tables = [
+        ModelTable(
+            name="events",
+            columns=[ModelColumn("id", "UInt64", False, True, False, None, None)],
+            clickhouse_options={"ch_order_by": ["id", "name"]},
+        )
+    ]
+    snapshot = {
+        "events": {
+            "columns": {"id": {"type": "UInt64", "nullable": False, "default": None, "ch_column": {"ch_type": "UInt64"}}},
+            "clickhouse_options": {"ch_order_by": ["id"]},
+            "object_type": "table",
+            "indexes": {},
+        }
+    }
+    issues = analyze_schema(model_tables, snapshot)
+    order_by_issues = [i for i in issues if i.change_type == "clickhouse_order_by"]
+    assert len(order_by_issues) > 0
+
+
+def test_ch_ttl_change_raises_safety_warning():
+    model_tables = [
+        ModelTable(
+            name="events",
+            columns=[ModelColumn("id", "UInt64", False, True, False, None, None)],
+            clickhouse_options={"ch_ttl": ["created_at + INTERVAL 90 DAY"]},
+        )
+    ]
+    snapshot = {
+        "events": {
+            "columns": {"id": {"type": "UInt64", "nullable": False, "default": None, "ch_column": {"ch_type": "UInt64"}}},
+            "clickhouse_options": {"ch_ttl": ["created_at + INTERVAL 30 DAY"]},
+            "object_type": "table",
+            "indexes": {},
+        }
+    }
+    issues = analyze_schema(model_tables, snapshot)
+    ttl_issues = [i for i in issues if i.change_type == "clickhouse_ttl"]
+    assert len(ttl_issues) > 0
+
+
+def test_ch_add_column_no_safety_issue():
+    """Adding a column to a ClickHouse table should only raise informational, not ERROR."""
+    model_tables = [
+        ModelTable(
+            name="events",
+            columns=[
+                ModelColumn("id", "UInt64", False, True, False, None, None),
+                ModelColumn("name", "String", True, False, False, None, None),
+            ],
+            clickhouse_options={"ch_engine": "MergeTree", "ch_order_by": ["id"]},
+        )
+    ]
+    snapshot = {
+        "events": {
+            "columns": {"id": {"type": "UInt64", "nullable": False, "default": None, "ch_column": {"ch_type": "UInt64"}}},
+            "clickhouse_options": {"ch_engine": "MergeTree", "ch_order_by": ["id"]},
+            "object_type": "table",
+            "indexes": {},
+        }
+    }
+    issues = analyze_schema(model_tables, snapshot)
+    assert len(issues) == 1
+    assert issues[0].change_type == "add_column"
+    assert issues[0].severity == "INFO"
