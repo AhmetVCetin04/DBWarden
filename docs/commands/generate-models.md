@@ -81,7 +81,11 @@ Database column types are mapped to SQLAlchemy types:
 For PostgreSQL databases, `generate-models` reverse-engineers all supported metadata and emits it as `class Meta` inner classes with `PGTableMeta` and `PGColumnMeta`:
 
 ```python
-from dbwarden import Base, PGTableMeta, PGColumnMeta
+from sqlalchemy.orm import DeclarativeBase
+from dbwarden import PGTableMeta, PGColumnMeta
+
+class Base(DeclarativeBase):
+    pass
 
 class User(Base):
     __tablename__ = "users"
@@ -125,7 +129,11 @@ For the complete feature reference, see [PostgreSQL Deep Dive](../databases/post
 For ClickHouse databases, `generate-models` reverse-engineers all supported metadata and emits it as `class Meta` inner classes with `CHTableMeta`, `CHColumnMeta`, `ChEngineSpec`, and `ProjectionSpec`. Engine metadata is included automatically when `database_type="clickhouse"` (no `--clickhouse-engines` flag required).
 
 ```python
-from dbwarden import Base, CHTableMeta, CHColumnMeta, ChEngineSpec, ProjectionSpec
+from sqlalchemy.orm import DeclarativeBase
+from dbwarden import CHTableMeta, CHColumnMeta, ChEngineSpec, ProjectionSpec
+
+class Base(DeclarativeBase):
+    pass
 
 class Event(Base):
     __tablename__ = "events"
@@ -157,7 +165,7 @@ The following metadata is reverse-engineered:
 - **Materialized views**: `ch_select_statement`, `ch_to_table`
 - **Dictionaries**: `ch_dictionary`, `ch_dict_layout`, `ch_dict_source`, `ch_dict_lifetime`, `ch_dict_primary_key`
 - **Column metadata**: codec, default expression, LowCardinality/Nullable wrappers via `CHColumnMeta`
-- **Skip indexes**: `index()` with `clickhouse_type`, `clickhouse_granularity`
+- **Skip indexes**: `ChIndexSpec` entries in `ch_indexes`
 - **Table and column comments**
 
 For the complete feature reference, see [ClickHouse Deep Dive](../databases/clickhouse.md).

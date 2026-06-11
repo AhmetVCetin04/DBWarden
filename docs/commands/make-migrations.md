@@ -378,8 +378,8 @@ FKs are compared by content (columns, referenced table, referenced columns), not
 | `tablespace` | `TABLESPACE <name>` | PostgreSQL | `TABLESPACE fast_space` |
 | `nulls_not_distinct` | `NULLS NOT DISTINCT` | PostgreSQL 15+ | On unique indexes |
 | `column_sorting` | Per-column `ASC/DESC NULLS FIRST/LAST` | PostgreSQL | `col1 DESC NULLS LAST, col2 ASC` |
-| `clickhouse_type` | `TYPE <type>` | ClickHouse | `TYPE minmax`, `TYPE bloom_filter` |
-| `clickhouse_granularity` | `GRANULARITY <n>` | ClickHouse | `GRANULARITY 3` |
+| `type` | `TYPE <type>` | ClickHouse | `TYPE minmax`, `TYPE bloom_filter` |
+| `granularity` | `GRANULARITY <n>` | ClickHouse | `GRANULARITY 3` |
 | `concurrently` | `CONCURRENTLY` | PostgreSQL | `--concurrent` / `--no-concurrent` |
 
 Omitted attributes or `None`-valued attributes are treated as defaults (btree, no partial, no INCLUDE, etc.), so a plain `Index("ix", "col")` produces the same signature across versions.
@@ -392,7 +392,7 @@ Omitted attributes or `None`-valued attributes are treated as defaults (btree, n
 **Backend specifics:**
 - PostgreSQL uses `CREATE INDEX CONCURRENTLY` by default (`--concurrent`). Use `--no-concurrent` inside transaction blocks.
 - SQLite and MySQL use standard `CREATE INDEX`.
-- ClickHouse generates `ALTER TABLE ... ADD INDEX ... TYPE <type> GRANULARITY <n>` when `clickhouse_type` is set; otherwise emits a comment.
+- ClickHouse generates `ALTER TABLE ... ADD INDEX ... TYPE <type> GRANULARITY <n>` for `ChIndexSpec` entries in `ch_indexes`; standard SQL indexes still emit a comment.
 
 ## Statement ordering
 

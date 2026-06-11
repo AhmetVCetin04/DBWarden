@@ -82,7 +82,11 @@ PostgreSQL metadata is declared in a `class Meta` inner class on the model. This
 Inherit from `PGTableMeta` on your `class Meta`:
 
 ```python
-from dbwarden import Base, PGTableMeta
+from sqlalchemy.orm import DeclarativeBase
+from dbwarden import PGTableMeta
+
+class Base(DeclarativeBase):
+    pass
 
 class User(Base):
     __tablename__ = "users"
@@ -138,7 +142,11 @@ class Meta(PGTableMeta):
 Use `PGColumnMeta` inner classes for per-column metadata. The inner class must be named after the column:
 
 ```python
-from dbwarden import Base, PGTableMeta, PGColumnMeta
+from sqlalchemy.orm import DeclarativeBase
+from dbwarden import PGTableMeta, PGColumnMeta
+
+class Base(DeclarativeBase):
+    pass
 
 class User(Base):
     __tablename__ = "users"

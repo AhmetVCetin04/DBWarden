@@ -56,7 +56,11 @@ Every backend supports a core set of cross-database attributes. These work with 
 ### Table-Level
 
 ```python
-from dbwarden import Base, TableMeta
+from sqlalchemy.orm import DeclarativeBase
+from dbwarden import TableMeta
+
+class Base(DeclarativeBase):
+    pass
 
 class User(Base):
     __tablename__ = "users"
@@ -91,7 +95,11 @@ For the full list of backend-specific column attributes (`pg_*`, `ch_*`, `my_*`,
 When `database_type="postgresql"`, use `class Meta(PGTableMeta)` for table-level metadata and `PGColumnMeta` inner classes for column-level metadata.
 
 ```python
-from dbwarden import Base, PGTableMeta, PGColumnMeta
+from sqlalchemy.orm import DeclarativeBase
+from dbwarden import PGTableMeta, PGColumnMeta
+
+class Base(DeclarativeBase):
+    pass
 
 class User(Base):
     __tablename__ = "users"
@@ -118,7 +126,11 @@ See the [reference](../models.md#postgresql-model-metadata) for the full list of
 When `database_type="clickhouse"`, use `class Meta(CHTableMeta)` for table-level metadata and `CHColumnMeta` inner classes for column-level metadata.
 
 ```python
-from dbwarden import Base, CHTableMeta, CHColumnMeta, ChEngineSpec, ChIndexSpec, ProjectionSpec
+from sqlalchemy.orm import DeclarativeBase
+from dbwarden import CHTableMeta, CHColumnMeta, ChEngineSpec, ChIndexSpec, ProjectionSpec
+
+class Base(DeclarativeBase):
+    pass
 
 class Event(Base):
     __tablename__ = "events"

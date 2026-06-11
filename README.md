@@ -102,10 +102,11 @@ primary = database_config(
 
 ```python
 from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import DeclarativeBase
 from dbwarden import TableMeta, IndexSpec
 
-Base = declarative_base()
+class Base(DeclarativeBase):
+    pass
 
 class User(Base):
     __tablename__ = "users"

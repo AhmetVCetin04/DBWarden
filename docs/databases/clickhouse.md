@@ -63,7 +63,7 @@ The following ClickHouse features are fully supported in this round-trip:
 | Materialized Views | `CREATE MATERIALIZED VIEW ... TO target AS SELECT ...` via `ch_select_statement`, `ch_to_table` |
 | Projections | `PROJECTION name (SELECT ...)` via `ProjectionSpec` list |
 | Dictionaries | `CREATE DICTIONARY ... SOURCE(...) LIFETIME(...) LAYOUT(...)` via `ch_dict_*` fields |
-| Skip Indexes | `ALTER TABLE ... ADD INDEX ... TYPE bloom_filter GRANULARITY N` via `index()` factory with `clickhouse_type` / `clickhouse_granularity` |
+| Skip Indexes | `ALTER TABLE ... ADD INDEX ... TYPE bloom_filter GRANULARITY N` via `ChIndexSpec` entries in `ch_indexes` |
 | Column Codecs | `CODEC(ZSTD(3))` via `ch_codec` on `CHColumnMeta` |
 | LowCardinality / Nullable | Type wrappers via `ch_low_cardinality`, `ch_nullable` on `CHColumnMeta` |
 | Column Defaults | `DEFAULT expr`, `MATERIALIZED expr`, `ALIAS expr` via column Meta |
@@ -80,7 +80,11 @@ ClickHouse metadata is declared in a `class Meta` inner class on the model. This
 Inherit from `CHTableMeta` on your `class Meta`:
 
 ```python
-from dbwarden import Base, CHTableMeta, ChEngineSpec, ProjectionSpec, index
+from sqlalchemy.orm import DeclarativeBase
+from dbwarden import CHTableMeta, ChEngineSpec, ProjectionSpec
+
+class Base(DeclarativeBase):
+    pass
 
 class Event(Base):
     __tablename__ = "events"
@@ -105,7 +109,7 @@ class Event(Base):
 | Attribute | Type | SQL |
 |-----------|------|-----|
 | `comment` | `str` | `COMMENT ON TABLE t IS '...'` |
-| `indexes` | `list[IndexSpec]` | Skip indexes via `index()` factory |
+| `indexes` | `list[dict]` | Common cross-database indexes |
 | `checks` | `list[dict]` | `ALTER TABLE t ADD CONSTRAINT ... CHECK (...)` |
 | `uniques` | `list[dict]` | `ALTER TABLE t ADD CONSTRAINT ... UNIQUE (...)` |
 
@@ -128,6 +132,7 @@ ClickHouse-specific `CHTableMeta` attributes:
 | `ch_dict_source` | `str` | Dictionary source (e.g., `"CLICKHOUSE(TABLE 'src')"`) |
 | `ch_dict_lifetime` | `int` or `str` | Dictionary cache lifetime |
 | `ch_dict_primary_key` | `str` or `list[str]` | Dictionary primary key |
+| `ch_indexes` | `list[ChIndexSpec]` | Skip indexes via `ALTER TABLE ... ADD INDEX ...` |
 | `ch_projections` | `list[ProjectionSpec]` | Named projections |
 | `ch_zookeeper_path` | `str` | ZooKeeper path for replicated engines |
 | `ch_replica_name` | `str` | Replica name for replicated engines |
@@ -234,7 +239,11 @@ ALTER TABLE events ADD INDEX ix_url (url) TYPE minmax GRANULARITY 3
 Use `CHColumnMeta` inner classes for per-column metadata. The inner class must be named after the column:
 
 ```python
-from dbwarden import Base, CHTableMeta, CHColumnMeta, ChEngineSpec
+from sqlalchemy.orm import DeclarativeBase
+from dbwarden import CHTableMeta, CHColumnMeta, ChEngineSpec
+
+class Base(DeclarativeBase):
+    pass
 
 class Event(Base):
     __tablename__ = "events"
@@ -410,7 +419,7 @@ ClickHouse does not enforce foreign key constraints. Any FK add/drop operations 
 
 ### Indexes (Standard)
 
-Standard SQL indexes are not supported. Only ClickHouse skip indexes (declared via `index()` with `clickhouse_type`) generate real DDL. See [Skip Indexes](#skip-indexes) above.
+Standard SQL indexes are not supported. Only ClickHouse skip indexes declared via `ch_indexes` and `ChIndexSpec` generate real DDL. See [Skip Indexes](#skip-indexes) above.
 
 ## Snapshot Format
 
@@ -469,7 +478,11 @@ Auto-detection is the default: when `database_type="clickhouse"`, engine metadat
 Generated output for a table with engine, ordering, partitioning, codec, and projections:
 
 ```python
-from dbwarden import Base, CHTableMeta, CHColumnMeta, ChEngineSpec, ProjectionSpec
+from sqlalchemy.orm import DeclarativeBase
+from dbwarden import CHTableMeta, CHColumnMeta, ChEngineSpec, ProjectionSpec
+
+class Base(DeclarativeBase):
+    pass
 
 class Event(Base):
     __tablename__ = "events"

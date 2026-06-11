@@ -62,7 +62,11 @@ Every backend supports a core set of cross-database attributes via `class Meta(T
 | `uniques` | `list[dict]` | `ALTER TABLE t ADD CONSTRAINT ... UNIQUE (...)` | All |
 
 ```python
-from dbwarden import Base, TableMeta
+from sqlalchemy.orm import DeclarativeBase
+from dbwarden import TableMeta
+
+class Base(DeclarativeBase):
+    pass
 
 class User(Base):
     __tablename__ = "users"
@@ -139,7 +143,11 @@ When `database_type="postgresql"`, DBWarden supports first-class PostgreSQL meta
 Inherit from `PGTableMeta` on your `class Meta`:
 
 ```python
-from dbwarden import Base, PGTableMeta
+from sqlalchemy.orm import DeclarativeBase
+from dbwarden import PGTableMeta
+
+class Base(DeclarativeBase):
+    pass
 
 class User(Base):
     __tablename__ = "users"
@@ -158,7 +166,11 @@ class User(Base):
 Use `PGColumnMeta` inner classes named after the column:
 
 ```python
-from dbwarden import Base, PGTableMeta, PGColumnMeta
+from sqlalchemy.orm import DeclarativeBase
+from dbwarden import PGTableMeta, PGColumnMeta
+
+class Base(DeclarativeBase):
+    pass
 
 class User(Base):
     __tablename__ = "users"
@@ -189,7 +201,11 @@ When `database_type="clickhouse"`, DBWarden supports first-class ClickHouse meta
 Inherit from `CHTableMeta` on your `class Meta`:
 
 ```python
-from dbwarden import Base, CHTableMeta, ChEngineSpec
+from sqlalchemy.orm import DeclarativeBase
+from dbwarden import CHTableMeta, ChEngineSpec
+
+class Base(DeclarativeBase):
+    pass
 
 class Event(Base):
     __tablename__ = "events"
@@ -220,7 +236,11 @@ For the full list of supported attributes, see [ClickHouse Deep Dive](databases/
 Use `CHColumnMeta` inner classes named after the column:
 
 ```python
-from dbwarden import Base, CHTableMeta, CHColumnMeta, ChEngineSpec
+from sqlalchemy.orm import DeclarativeBase
+from dbwarden import CHTableMeta, CHColumnMeta, ChEngineSpec
+
+class Base(DeclarativeBase):
+    pass
 
 class Event(Base):
     __tablename__ = "events"
