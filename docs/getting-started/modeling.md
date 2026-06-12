@@ -36,7 +36,7 @@ This guide walks through the process of defining SQLAlchemy models that DBWarden
 
 DBWarden discovers models in the directories specified by `model_paths` in your `database_config(...)`. It reads two sources of metadata from each model:
 
-1. **Column definitions**: standard SQLAlchemy `Column(...)` types, nullability, defaults, primary keys
+1. **Column definitions**: typed SQLAlchemy `Mapped[...] = mapped_column(...)` fields, nullability, defaults, primary keys
 2. **`class Meta` inner class**: backend-specific options like engine specs, partitioning, codecs
 
 All backend-specific metadata uses the `class Meta` pattern. The `__table_args__` approach is not supported for PostgreSQL or ClickHouse metadata. Using `mapped_column(info=...)` for backend-specific options raises `DBWardenConfigError`.
@@ -48,7 +48,8 @@ Every backend supports a core set of cross-database attributes. These work with 
 ### Table-Level
 
 ```python
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy import Integer, String
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from dbwarden import TableMeta
 
 class Base(DeclarativeBase):
@@ -57,8 +58,8 @@ class Base(DeclarativeBase):
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True)
-    email = Column(String(255))
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    email: Mapped[str] = mapped_column(String(255))
 
     class Meta(TableMeta):
         comment = "Core user accounts"
@@ -87,7 +88,8 @@ For backend-specific column options, use `pg = pg.field(...)` for PostgreSQL or 
 When `database_type="postgresql"`, use `class Meta(PGTableMeta)` for table-level metadata and `PGColumnMeta` inner classes for column-level metadata.
 
 ```python
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy import Integer, Text
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from dbwarden import PGTableMeta, PGColumnMeta
 from dbwarden.schema import pg
 
@@ -97,8 +99,8 @@ class Base(DeclarativeBase):
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True)
-    bio = Column(Text)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    bio: Mapped[str] = mapped_column(Text)
 
     class Meta(PGTableMeta):
         pg_fillfactor = 80
@@ -117,7 +119,8 @@ See the [reference](../models.md#postgresql-model-metadata) for the full list of
 When `database_type="clickhouse"`, use `class Meta(CHTableMeta)` for table-level metadata and `CHColumnMeta` inner classes for column-level metadata.
 
 ```python
-from sqlalchemy.orm import DeclarativeBase
+from datetime import date
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from dbwarden import CHTableMeta, CHColumnMeta, ChEngineSpec, ChIndexSpec, ProjectionSpec
 from dbwarden.schema import ch
 
@@ -127,10 +130,10 @@ class Base(DeclarativeBase):
 class Event(Base):
     __tablename__ = "events"
 
-    id = Column(Int64, primary_key=True)
-    event_date = Column(Date)
-    payload = Column(String)
-    tags = Column(ARRAY(String))
+    id: Mapped[int] = mapped_column(Int64, primary_key=True)
+    event_date: Mapped[date] = mapped_column(Date)
+    payload: Mapped[str] = mapped_column(String)
+    tags: Mapped[list[str]] = mapped_column(ARRAY(String))
 
     class Meta(CHTableMeta):
         ch_engine = ChEngineSpec("MergeTree")
@@ -188,15 +191,17 @@ Use `@auto_schema` to generate four Pydantic schema classes on your model:
 | `Model.PublicSchema` | Excludes fields where `public=False` or name starts with `_` |
 
 ```python
+from sqlalchemy import Integer, String
+from sqlalchemy.orm import Mapped, mapped_column
 from dbwarden.schema import auto_schema
 
 @auto_schema
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True)
-    email = Column(String(255))
-    password_hash = Column(String(255))
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    email: Mapped[str] = mapped_column(String(255))
+    password_hash: Mapped[str] = mapped_column(String(255))
 
     class Meta:
         class email:

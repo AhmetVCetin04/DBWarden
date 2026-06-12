@@ -178,11 +178,11 @@ Validation happens **before** any commands execute.
 
 When looking for config, DBWarden uses this precedence:
 
-1. **Top-level `dbwarden.py`** — the conventional standalone config file at your project root. Always sandboxed (only `dbwarden` imports allowed).
+1. **Top-level `dbwarden.py`** — the conventional standalone config file at your project root. This is the default scaffold created by `dbwarden init`, not the only valid location. Always sandboxed (only `dbwarden` imports allowed).
 
 2. **`DBWARDEN_CONFIG_MODULE`** — an explicit environment variable override. Always imported normally as a Python module (no sandbox). This is the escape hatch for projects with ambiguous full-scan results or non-standard layouts.
 
-3. **Full-scan discovery** — if neither of the above produces a config source, DBWarden walks your project tree looking for any `database_config(...)` call. Files directly at the project root are sandboxed; files inside subdirectories are imported normally.
+3. **Full-scan discovery** — if neither of the above produces a config source, DBWarden walks your project tree looking for any `database_config(...)` call. This means `database_config(...)` can live in any discovered Python file inside your project. Files directly at the project root are sandboxed; files inside subdirectories are imported normally.
 
 ### Config Loading Security (Sandbox)
 

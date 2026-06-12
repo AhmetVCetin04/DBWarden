@@ -79,6 +79,7 @@ primary = database_config(
     dev_database_type="sqlite",
     dev_database_url="sqlite:///./dev.db",
     model_paths=["app.models"],
+    model_tables=["users", "posts"],
 )
 ```
 
@@ -96,6 +97,7 @@ primary = database_config(
     database_type="postgresql",
     database_url_sync=os.getenv("DATABASE_URL"),
     model_paths=["app.models"],
+    model_tables=["users", "posts"],
 )
 ```
 
@@ -728,4 +730,4 @@ Take your app further:
 - **[Testing](../advanced/testing.md)** - Advanced testing patterns
 - **[Transaction Management](../advanced/transaction-management.md)** - Complex transactions
 - **[Production Patterns](../advanced/production-patterns.md)** - CI/CD and monitoring
-- **[Cookbook: FastAPI Integration](../cookbook/09-fastapi-integration.md)** - Standalone FastAPI example
+- **[Cookbook: FastAPI Integration](../../cookbook/09-fastapi-integration.md)** - Standalone FastAPI example

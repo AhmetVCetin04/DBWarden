@@ -109,31 +109,33 @@ dbwarden generate-models -d primary --tables users,posts
 This connects to the live database and generates SQLAlchemy model code:
 
 ```python
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey
-from sqlalchemy.orm import declarative_base
+from sqlalchemy import Integer, String, Boolean, DateTime, Text, ForeignKey
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-Base = declarative_base()
+
+class Base(DeclarativeBase):
+    pass
 
 
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True)
-    email = Column(String(255), nullable=False, unique=True)
-    username = Column(String(100), nullable=False, unique=True)
-    full_name = Column(String(200), nullable=True)
-    is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.now(UTC))
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    username: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
+    full_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(UTC))
 
 
 class Post(Base):
     __tablename__ = "posts"
 
-    id = Column(Integer, primary_key=True)
-    title = Column(String(255), nullable=False)
-    body = Column(Text, nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime, nullable=False)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
 ```
 
 This is the fastest way to bootstrap models from an existing database. You can review and annotate the output with `class Meta` afterward.

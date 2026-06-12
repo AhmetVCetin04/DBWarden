@@ -68,6 +68,8 @@ primary = database_config(
     default=True,
     database_type="postgresql",
     database_url_sync="postgresql://user:password@localhost:5432/main",
+    model_paths=["app.models"],
+    model_tables=["users"],
 )
 ```
 
@@ -153,4 +155,3 @@ Use status to confirm pending/applied counts and history to confirm execution or
 - [Configuration](../configuration/index.md)
 - [Your First Migration](first-migration.md)
 - [Developing Locally](developing-locally.md)
-

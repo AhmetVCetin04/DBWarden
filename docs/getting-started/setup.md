@@ -63,15 +63,8 @@ pip install "dbwarden[fastapi,metrics,sandbox]"
 
 ## Initialize the Project
 
-Run:
-
-```bash
-dbwarden init
-```
-
-Typical result:
-
 ```text
+$ dbwarden init
 Initialized DBWarden project structure
 Created migrations directory
 Created dbwarden.py
@@ -80,6 +73,8 @@ Created dbwarden.py
 `init` creates the local migration layout and a config scaffold. It is safe to run again, DBWarden will not destroy existing `database_config(...)` definitions.
 
 ## Create the Configuration File
+
+By default, `dbwarden init` creates `dbwarden.py`, and that is the simplest place to start. However, `database_config(...)` can live in any discovered Python file inside your project.
 
 The simplest `dbwarden.py` looks like this:
 
@@ -93,12 +88,13 @@ primary = database_config(
     database_type="postgresql",
     database_url_sync="postgresql://user:password@localhost:5432/main",
     model_paths=["app.models"],
+    model_tables=["users", "posts", "comments"],
     dev_database_type="sqlite",
     dev_database_url="sqlite:///./development.db",
 )
 ```
 
-Copy this to your local `dbwarden.py`, then adjust the URLs and `model_paths` for your project.
+Copy this into `dbwarden.py`, or another discovered Python module in your project, then adjust the URLs, `model_paths`, and `model_tables` for your project.
 
 ## Step by Step
 
@@ -170,7 +166,38 @@ model_paths=["app.models"]
 
 This tells DBWarden where to discover SQLAlchemy models. In multi-database projects, explicit `model_paths` are required.
 
-### Step 7: Configure a dev database
+### Step 7: Filter tables for this database
+
+```python
+model_tables=["users", "posts", "comments"]
+```
+
+Optional. When set, DBWarden only includes the listed tables from the discovered models. All other discovered tables are ignored.
+
+This is useful when multiple databases share the same `model_paths` but own different subsets of tables:
+
+```python
+primary = database_config(
+    database_name="primary",
+    default=True,
+    database_type="postgresql",
+    database_url_sync="postgresql://user:password@localhost:5432/main",
+    model_paths=["app.models"],
+    model_tables=["users", "posts", "comments"],
+)
+
+analytics = database_config(
+    database_name="analytics",
+    database_type="clickhouse",
+    database_url_sync="clickhouse://default:@localhost:8123/analytics",
+    model_paths=["app.models"],
+    model_tables=["events", "page_views"],
+)
+```
+
+If `model_tables` is not set, all discovered tables in `model_paths` belong to that database.
+
+### Step 8: Configure a dev database
 
 ```python
 dev_database_type="sqlite"
@@ -190,6 +217,7 @@ Type: postgresql
 Default: true
 Sync URL: postgresql://user:password@localhost:5432/main
 Model paths: ['app.models']
+Model tables: ['users', 'posts', 'comments']
 Dev database type: sqlite
 Dev database URL: sqlite:///./development.db
 ```
@@ -200,7 +228,7 @@ If this command works, DBWarden can resolve and validate your config.
 
 ### `No configuration found`
 
-DBWarden could not locate a config source. Make sure your project contains one discovered file with a `database_config(...)` call, usually `dbwarden.py`.
+DBWarden could not locate a config source. Make sure your project contains at least one discovered file with a `database_config(...)` call. `dbwarden.py` is the default convention, but it does not have to be the only location.
 
 ### `Exactly one default=True required`
 

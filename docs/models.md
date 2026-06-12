@@ -45,6 +45,7 @@ primary = database_config(
     database_type="postgresql",
     database_url_sync="postgresql://user:pass@localhost:5432/main",
     model_paths=["app.models"],
+    model_tables=["users", "posts", "comments"],
 )
 ```
 
@@ -62,7 +63,8 @@ Every backend supports a core set of cross-database attributes via `class Meta(T
 | `uniques` | `list[dict]` | `ALTER TABLE t ADD CONSTRAINT ... UNIQUE (...)` | All |
 
 ```python
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy import Integer, String
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from dbwarden import TableMeta
 
 class Base(DeclarativeBase):
@@ -71,8 +73,8 @@ class Base(DeclarativeBase):
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True)
-    email = Column(String(255))
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    email: Mapped[str] = mapped_column(String(255))
 
     class Meta(TableMeta):
         comment = "Core user accounts"
@@ -141,7 +143,8 @@ When `database_type="postgresql"`, DBWarden supports first-class PostgreSQL meta
 Inherit from `PGTableMeta` on your `class Meta`:
 
 ```python
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy import Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from dbwarden import PGTableMeta
 
 class Base(DeclarativeBase):
@@ -150,7 +153,7 @@ class Base(DeclarativeBase):
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
     class Meta(PGTableMeta):
         pg_fillfactor = 80
@@ -164,7 +167,8 @@ class User(Base):
 Use `PGColumnMeta` inner classes named after the column. Use `pg = pg.field(...)` to set column-level options:
 
 ```python
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy import Integer, Text
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from dbwarden import PGTableMeta, PGColumnMeta
 from dbwarden.schema import pg
 
@@ -174,8 +178,8 @@ class Base(DeclarativeBase):
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True)
-    bio = Column(Text)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    bio: Mapped[str] = mapped_column(Text)
 
     class Meta(PGTableMeta):
         class id(PGColumnMeta):
@@ -198,7 +202,8 @@ When `database_type="clickhouse"`, DBWarden supports first-class ClickHouse meta
 Inherit from `CHTableMeta` on your `class Meta`:
 
 ```python
-from sqlalchemy.orm import DeclarativeBase
+from datetime import date
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from dbwarden import CHTableMeta, ChEngineSpec
 
 class Base(DeclarativeBase):
@@ -207,9 +212,9 @@ class Base(DeclarativeBase):
 class Event(Base):
     __tablename__ = "events"
 
-    id = Column(Int64, primary_key=True)
-    event_date = Column(Date)
-    payload = Column(String)
+    id: Mapped[int] = mapped_column(Int64, primary_key=True)
+    event_date: Mapped[date] = mapped_column(Date)
+    payload: Mapped[str] = mapped_column(String)
 
     class Meta(CHTableMeta):
         ch_engine = ChEngineSpec("ReplacingMergeTree", args=("version_column",))
@@ -233,7 +238,7 @@ For the full list of supported attributes, see [ClickHouse Deep Dive](databases/
 Use `CHColumnMeta` inner classes named after the column. Use `ch = ch.field(...)` to set column-level options:
 
 ```python
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from dbwarden import CHTableMeta, CHColumnMeta, ChEngineSpec
 from dbwarden.schema import ch
 
@@ -243,9 +248,9 @@ class Base(DeclarativeBase):
 class Event(Base):
     __tablename__ = "events"
 
-    id = Column(Int64, primary_key=True)
-    payload = Column(String)
-    tags = Column(ARRAY(String))
+    id: Mapped[int] = mapped_column(Int64, primary_key=True)
+    payload: Mapped[str] = mapped_column(String)
+    tags: Mapped[list[str]] = mapped_column(ARRAY(String))
 
     class Meta(CHTableMeta):
         ch_engine = ChEngineSpec("MergeTree")
@@ -329,8 +334,8 @@ Materialized views use `ch_select_statement` and optionally `ch_to_table`:
 class EventRollup(Base):
     __tablename__ = "event_rollup_mv"
 
-    event_date = Column(Date)
-    total = Column(Int64)
+    event_date: Mapped[date] = mapped_column(Date)
+    total: Mapped[int] = mapped_column(Int64)
 
     class Meta(CHTableMeta):
         ch_object_type = "materialized_view"
@@ -351,8 +356,8 @@ ClickHouse dictionaries use `ch_dictionary = True` with related `ch_dict_*` fiel
 class CountryCode(Base):
     __tablename__ = "country_codes"
 
-    code = Column(String)
-    name = Column(String)
+    code: Mapped[str] = mapped_column(String)
+    name: Mapped[str] = mapped_column(String)
 
     class Meta(CHTableMeta):
         ch_dictionary = True

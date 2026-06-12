@@ -47,6 +47,7 @@ primary = database_config(
     database_type="postgresql",
     database_url_sync="postgresql://user:password@localhost:5432/main",
     model_paths=["app.models"],
+    model_tables=["users", "posts", "comments"],
 )
 
 analytics = database_config(
@@ -54,6 +55,7 @@ analytics = database_config(
     database_type="clickhouse",
     database_url_sync="clickhouse://default:@localhost:8123/analytics",
     model_paths=["app.analytics_models"],
+    model_tables=["events", "page_views"],
 )
 ```
 
@@ -72,7 +74,7 @@ dbwarden status --all
 
 ## Separate Model Sets
 
-Each database should usually own a distinct model set through `model_paths`. DBWarden validates overlapping paths unless `overlap_models=True` is set explicitly.
+Each database should usually own a distinct model set through `model_paths`. When databases share the same models package, use `model_tables` to split ownership by table name. DBWarden validates overlapping paths unless `overlap_models=True` is set explicitly.
 
 This prevents one model tree from being interpreted as belonging to multiple databases by accident.
 

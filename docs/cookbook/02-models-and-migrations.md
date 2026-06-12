@@ -53,12 +53,12 @@ Our example project defines four models in `examples/core/app/models.py`. Here t
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True)
-    email = Column(String(255), unique=True, nullable=False)
-    username = Column(String(100), unique=True, nullable=False)
-    full_name = Column(String(200), nullable=True)
-    is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, server_default=text("CURRENT_TIMESTAMP"))
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    username: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    full_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=text("CURRENT_TIMESTAMP"))
 
     class Meta(TableMeta):
         comment = "Core user accounts"
@@ -81,11 +81,11 @@ Key points:
 class Post(Base):
     __tablename__ = "posts"
 
-    id = Column(Integer, primary_key=True)
-    title = Column(String(255), nullable=False)
-    body = Column(Text, nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime, server_default=text("CURRENT_TIMESTAMP"))
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=text("CURRENT_TIMESTAMP"))
 
     class Meta(TableMeta):
         comment = "User blog posts"
@@ -106,12 +106,12 @@ Key points:
 class Product(Base):
     __tablename__ = "products"
 
-    id = Column(Integer, primary_key=True)
-    name = Column(String(200), nullable=False)
-    price = Column(Float, nullable=False)
-    description = Column(Text, nullable=True)
-    in_stock = Column(Boolean, default=True)
-    created_at = Column(DateTime, server_default=text("CURRENT_TIMESTAMP"))
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    price: Mapped[float] = mapped_column(Float, nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    in_stock: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=text("CURRENT_TIMESTAMP"))
 
     class Meta(TableMeta):
         comment = "Product catalog"
@@ -132,8 +132,8 @@ Key points:
 class Tag(Base):
     __tablename__ = "tags"
 
-    id = Column(Integer, primary_key=True)
-    name = Column(String(50), unique=True, nullable=False)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
 
     class Meta(TableMeta):
         comment = "Taxonomy tags for products"

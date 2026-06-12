@@ -80,7 +80,8 @@ ClickHouse metadata is declared in a `class Meta` inner class on the model. This
 Inherit from `CHTableMeta` on your `class Meta`:
 
 ```python
-from sqlalchemy.orm import DeclarativeBase
+from datetime import date, datetime
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from dbwarden import CHTableMeta, ChEngineSpec, ProjectionSpec
 
 class Base(DeclarativeBase):
@@ -89,9 +90,9 @@ class Base(DeclarativeBase):
 class Event(Base):
     __tablename__ = "events"
 
-    id = Column(Int64, primary_key=True)
-    event_date = Column(Date)
-    payload = Column(String)
+    id: Mapped[int] = mapped_column(Int64, primary_key=True)
+    event_date: Mapped[date] = mapped_column(Date)
+    payload: Mapped[str] = mapped_column(String)
 
     class Meta(CHTableMeta):
         ch_engine = ChEngineSpec("MergeTree")
@@ -239,7 +240,7 @@ ALTER TABLE events ADD INDEX ix_url (url) TYPE minmax GRANULARITY 3
 Use `CHColumnMeta` inner classes for per-column metadata. The inner class must be named after the column. Use `ch = ch.field(...)` to set column-level options:
 
 ```python
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from dbwarden import CHTableMeta, CHColumnMeta, ChEngineSpec
 from dbwarden.schema import ch
 
@@ -249,10 +250,10 @@ class Base(DeclarativeBase):
 class Event(Base):
     __tablename__ = "events"
 
-    id = Column(Int64, primary_key=True)
-    payload = Column(String)
-    event_time = Column(DateTime)
-    tags = Column(ARRAY(String))
+    id: Mapped[int] = mapped_column(Int64, primary_key=True)
+    payload: Mapped[str] = mapped_column(String)
+    event_time: Mapped[datetime] = mapped_column(DateTime)
+    tags: Mapped[list[str]] = mapped_column(ARRAY(String))
 
     class Meta(CHTableMeta):
         ch_engine = ChEngineSpec("MergeTree")
@@ -296,8 +297,8 @@ Materialized views use `ch_select_statement` instead of `ch_engine` for the targ
 class EventRollup(Base):
     __tablename__ = "event_rollup_mv"
 
-    event_date = Column(Date)
-    total = Column(Int64)
+    event_date: Mapped[date] = mapped_column(Date)
+    total: Mapped[int] = mapped_column(Int64)
 
     class Meta(CHTableMeta):
         ch_object_type = "materialized_view"
@@ -326,8 +327,8 @@ ClickHouse dictionaries use `ch_dictionary = True` and related `ch_dict_*` field
 class CountryCode(Base):
     __tablename__ = "country_codes"
 
-    code = Column(String)
-    name = Column(String)
+    code: Mapped[str] = mapped_column(String)
+    name: Mapped[str] = mapped_column(String)
 
     class Meta(CHTableMeta):
         ch_dictionary = True
@@ -479,7 +480,8 @@ Auto-detection is the default: when `database_type="clickhouse"`, engine metadat
 Generated output for a table with engine, ordering, partitioning, codec, and projections:
 
 ```python
-from sqlalchemy.orm import DeclarativeBase
+from datetime import date
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from dbwarden import CHTableMeta, CHColumnMeta, ChEngineSpec, ProjectionSpec
 from dbwarden.schema import ch
 
@@ -489,9 +491,9 @@ class Base(DeclarativeBase):
 class Event(Base):
     __tablename__ = "events"
 
-    id = Column(Int64, primary_key=True)
-    event_date = Column(Date)
-    payload = Column(String)
+    id: Mapped[int] = mapped_column(Int64, primary_key=True)
+    event_date: Mapped[date] = mapped_column(Date)
+    payload: Mapped[str] = mapped_column(String)
 
     class Meta(CHTableMeta):
         ch_engine = ChEngineSpec("MergeTree")

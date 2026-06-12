@@ -188,10 +188,10 @@ DBWarden validates your configuration:
 DBWarden discovers your configuration automatically:
 
 1. **Looks for `dbwarden.py`** in current directory or parents
-2. **Scans for `database_config()` calls** in your codebase
-3. **Checks `DBWARDEN_CONFIG_MODULE`** environment variable
+2. **Checks `DBWARDEN_CONFIG_MODULE`** environment variable
+3. **Scans for `database_config()` calls** in your codebase
 
-Place `dbwarden.py` in your project root for best results.
+`dbwarden.py` is the default convention and the file created by `dbwarden init`, but `database_config(...)` can live in any discovered Python file inside your project.
 
 ## Common Patterns
 

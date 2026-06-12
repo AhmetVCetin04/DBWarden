@@ -82,7 +82,8 @@ PostgreSQL metadata is declared in a `class Meta` inner class on the model. This
 Inherit from `PGTableMeta` on your `class Meta`:
 
 ```python
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy import Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from dbwarden import PGTableMeta
 
 class Base(DeclarativeBase):
@@ -91,7 +92,7 @@ class Base(DeclarativeBase):
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
     class Meta(PGTableMeta):
         pg_fillfactor = 80
@@ -142,7 +143,8 @@ class Meta(PGTableMeta):
 Use `PGColumnMeta` inner classes for per-column metadata. The inner class must be named after the column. Use `pg = pg.field(...)` to set column-level options:
 
 ```python
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy import Integer, String, Text
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from dbwarden import PGTableMeta, PGColumnMeta
 from dbwarden.schema import pg
 
@@ -152,9 +154,9 @@ class Base(DeclarativeBase):
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True)
-    email = Column(String(255))
-    bio = Column(Text)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    email: Mapped[str] = mapped_column(String(255))
+    bio: Mapped[str] = mapped_column(Text)
 
     class Meta(PGTableMeta):
         class id(PGColumnMeta):
@@ -192,11 +194,12 @@ Foreign key options (`ondelete`, `onupdate`, `deferrable`) are captured from the
 
 ```python
 from sqlalchemy import ForeignKey
+from sqlalchemy.orm import Mapped, mapped_column
 
 class OrderItem(Base):
     __tablename__ = "order_items"
 
-    order_id = Column(Integer, ForeignKey("orders.id", ondelete="CASCADE", onupdate="CASCADE", deferrable=True), nullable=False)
+    order_id: Mapped[int] = mapped_column(ForeignKey("orders.id", ondelete="CASCADE", onupdate="CASCADE", deferrable=True), nullable=False)
 ```
 
 ## DDL Behavior
@@ -234,7 +237,7 @@ class User(Base):
     __tablename__ = "users"
 
     # Autoincrement enabled (SERIAL) — same as default behavior
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
     class Meta(PGTableMeta):
         id = ColumnMeta(autoincrement=True)
@@ -247,7 +250,7 @@ class User(Base):
     __tablename__ = "users"
 
     # Plain integer PK — no sequence, no auto-increment
-    id = Column(Integer, primary_key=True, autoincrement=False)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
 ```
 
 **What happens when autoincrement changes:**

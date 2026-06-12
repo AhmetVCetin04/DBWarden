@@ -70,6 +70,7 @@ primary = database_config(
     database_type="sqlite",
     database_url_sync="sqlite:///./app.db",
     model_paths=["app"],
+    model_tables=["users", "posts"],
 )
 ```
 
@@ -82,6 +83,7 @@ Each parameter has a specific role:
 | `database_type` | `"sqlite"` | Dialect for SQL generation and connection |
 | `database_url_sync` | `"sqlite:///./app.db"` | Synchronous connection URL |
 | `model_paths` | `["app"]` | Python module paths to scan for SQLAlchemy models |
+| `model_tables` | `["users", "posts"]` | Optional table-name filter for this database |
 
 The return value `primary` is a `DatabaseHandle` object. It's also used later for FastAPI dependency injection — the same object provides `primary.async_session` and `primary.sync_session`.
 

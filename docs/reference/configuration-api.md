@@ -405,7 +405,7 @@ Always set `secure_values=True` in production to prevent credential exposure in 
 
 ## Return value: `DatabaseHandle`
 
-`database_config()` returns a [`DatabaseHandle`][dbwarden.db_handle.DatabaseHandle] object with two
+`database_config()` returns a `DatabaseHandle` object with two
 properties designed as FastAPI dependency annotations:
 
 | Property | Resolves to (SQL) | Resolves to (ClickHouse) |
@@ -466,10 +466,12 @@ Config is loaded by importing your Python config source and executing `database_
 The resolution priority is:
 
 1. Look for `dbwarden.py` in the current directory or parent directories
-2. Full scan for any file containing `database_config(...)` calls
-3. If `DBWARDEN_CONFIG_MODULE` environment variable is set, use that module
+2. If `DBWARDEN_CONFIG_MODULE` environment variable is set, use that module
+3. Full scan for any file containing `database_config(...)` calls
 
 If more than one discovery source is found, DBWarden fails with an ambiguity error.
+
+`dbwarden.py` is the default convention, but it is not the only valid location. Any discovered Python file inside the project can call `database_config(...)`.
 
 ### Security sandbox
 
@@ -564,5 +566,3 @@ analytics = database_config(
 
 **Help:**
 - [Troubleshooting](../configuration/troubleshooting.md) - Common issues
-
-

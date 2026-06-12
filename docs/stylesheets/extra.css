@@ -1,3 +1,8 @@
 :root {
     --md-primary-fg-color: #cd4bfb;
 }
+
+/* Zensical renders a synthetic homepage H1 for root index.md. */
+.md-content__inner > h1#__skip {
+    display: none;
+}

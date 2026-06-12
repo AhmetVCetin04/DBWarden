@@ -64,6 +64,7 @@ primary = database_config(
     database_type="postgresql",
     database_url_sync="postgresql://user:password@localhost:5432/main",
     model_paths=["app.models"],
+    model_tables=["users", "posts", "comments"],
 )
 
 analytics = database_config(
@@ -71,10 +72,11 @@ analytics = database_config(
     database_type="clickhouse",
     database_url_sync="clickhouse://default:@localhost:8123/analytics",
     model_paths=["app.analytics_models"],
+    model_tables=["events", "page_views"],
 )
 ```
 
-Each entry is validated before use, including database names, table names, `model_paths`, and duplicate target detection.
+Each entry is validated before use, including database names, table names, `model_paths`, `model_tables`, and duplicate target detection.
 
 ## Model-Driven Migration Generation
 
@@ -89,7 +91,7 @@ Created migration: migrations/primary/primary__0002_add_posts_table.sql
 
 PostgreSQL and ClickHouse support first-class metadata through `class Meta`.
 
-PostgreSQL example:
+PostgreSQL
 
 ```python
 from dbwarden import PGTableMeta, PGColumnMeta

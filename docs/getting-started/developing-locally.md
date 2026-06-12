@@ -49,6 +49,7 @@ primary = database_config(
     database_type="postgresql",
     database_url_sync="postgresql://user:password@localhost:5432/main",
     model_paths=["app.models"],
+    model_tables=["users", "posts", "comments"],
     dev_database_type="sqlite",
     dev_database_url="sqlite:///./development.db",
 )
