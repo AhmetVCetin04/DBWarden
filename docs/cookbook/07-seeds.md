@@ -32,47 +32,60 @@ seo:
 
 ## What You'll Learn
 
-- How to create and apply SQL seed files
-- How to create Python seed files with programmatic logic
+- How to define code seeds using the `Seed` base class
+- How to create and apply file-based SQL/Python seeds (legacy)
 - How to list, apply, and roll back seeds
-- How `@seed_data` works for in-code seed definitions
+- How to auto-apply seeds after migrations
 
 ## Prerequisites
 
 - Completed [Section 3](03-apply-and-inspect.md) (migrations applied, tables exist)
 - `examples/core/` project
 
-## Step 1: Create a SQL Seed
+## Step 1: Define a Code Seed
 
-```bash
-cd examples/core
-bash scripts/07-seeds.sh
+Code seeds are the recommended way to seed data. They live alongside your models and keep seed logic close to the schema it populates.
+
+Create a seed file in your models directory (e.g. `models/seeds.py`):
+
+```python
+from dbwarden.seed import Seed
+
+class CountrySeed(Seed):
+    __seed_database__ = "primary"
+    __seed_description__ = "initial countries"
+    __seed_on_conflict__ = "update"
+    __seed_conflict_columns__ = ["code"]
+
+    model = Country
+    rows = [
+        Country(code="UY", name="Uruguay"),
+        Country(code="AR", name="Argentina"),
+    ]
 ```
 
-The key command:
+Notice:
 
-```bash
-dbwarden seed create "initial admin users" --database primary
-```
+- **No `version`** — versions are auto-assigned (`C0001`, `C0002`, ...)
+- **Model instances** in `rows` — your IDE gives full autocompletion on column names
+- **`__seed_database__`** — route the seed to the correct database
 
-This creates `seeds/V0001__initial_admin_users.sql` with a template:
+### Logic-Based Seeds
 
-```sql
--- Seed: initial admin users
--- Database: primary
--- Applied once and tracked in _dbwarden_seeds
+Define a `generate(session)` method for programmatic data:
 
--- INSERT statements go here
-```
+```python
+class PermissionSeed(Seed):
+    __seed_database__ = "primary"
+    __seed_description__ = "load permissions"
 
-We fill it in with actual data:
+    model = Permission
 
-```sql
-INSERT INTO users (email, username, full_name, is_active, created_at)
-VALUES ('admin@example.com', 'admin', 'Admin User', 1, CURRENT_TIMESTAMP);
-
-INSERT INTO users (email, username, full_name, is_active, created_at)
-VALUES ('moderator@example.com', 'moderator', 'Moderator User', 1, CURRENT_TIMESTAMP);
+    @staticmethod
+    def generate(session):
+        for resource in ["users", "orders"]:
+            for action in ["read", "write", "delete"]:
+                session.add(Permission(name=f"{resource}:{action}"))
 ```
 
 ## Step 2: Apply Seeds
@@ -84,11 +97,10 @@ dbwarden seed apply --database primary
 Output:
 
 ```
-[DBWarden] Applying seed V0001__initial_admin_users...
-[DBWarden] Seed applied
+Applying code seed C0001: initial countries
 ```
 
-Seeds are tracked in the `_dbwarden_seeds` table. Each seed version can only be applied once.
+Code seeds and file seeds are both discovered and applied together. Each seed version is tracked in `_dbwarden_seeds` and can only be applied once until rolled back.
 
 ## Step 3: List Applied Seeds
 
@@ -100,133 +112,106 @@ Output:
 
 ```
 Seeds for database 'primary':
-  V0001  initial_admin_users             applied  2025-01-15 10:30:00
+  C0001  initial countries                 applied  2025-01-15 10:30:00  (code seed)
 ```
 
-## Step 4: Create and Apply a Second Seed
+## Step 4: Auto-Apply Seeds After Migrations
+
+Configure seeds to be applied automatically after `dbwarden migrate`:
+
+```python
+database_config(
+    database_name="primary",
+    default=True,
+    database_type="sqlite",
+    database_url_sync="sqlite:///./app.db",
+    model_paths=["models"],
+    auto_apply_seeds=True,
+)
+```
+
+Now running `dbwarden migrate` will also apply any pending seeds.
+
+Or apply seeds once without changing config:
 
 ```bash
-dbwarden seed create "demo products" --database primary
+dbwarden migrate --apply-seeds
 ```
 
-Populate with product data:
+## Step 5: Traditional File Seeds (Legacy)
+
+For complex multi-statement SQL, you can still use file-based seeds.
+
+### Create a SQL Seed
+
+```bash
+dbwarden seed create "initial admin users" --database primary
+```
+
+This creates `seeds/V0001__initial_admin_users.sql`. Fill it with data:
 
 ```sql
-INSERT INTO products (name, price, description, in_stock, created_at)
-VALUES ('Widget', 9.99, 'A standard widget', 1, CURRENT_TIMESTAMP);
+INSERT INTO users (email, username, full_name, is_active, created_at)
+VALUES ('admin@example.com', 'admin', 'Admin User', 1, CURRENT_TIMESTAMP);
 
-INSERT INTO products (name, price, description, in_stock, created_at)
-VALUES ('Gadget', 24.99, 'A fancy gadget', 1, CURRENT_TIMESTAMP);
-
-INSERT INTO products (name, price, description, in_stock, created_at)
-VALUES ('Doohickey', 4.99, 'A small doohickey', 1, CURRENT_TIMESTAMP);
+INSERT INTO users (email, username, full_name, is_active, created_at)
+VALUES ('moderator@example.com', 'moderator', 'Moderator User', 1, CURRENT_TIMESTAMP);
 ```
+
+### Apply and List
 
 ```bash
 dbwarden seed apply --database primary
 dbwarden seed list --database primary
 ```
 
-```
-Seeds for database 'primary':
-  V0001  initial_admin_users             applied  2025-01-15 10:30:00
-  V0002  demo_products                   applied  2025-01-15 10:31:00
-```
-
-## Step 5: Roll Back a Seed
-
-```bash
-dbwarden seed rollback --database primary --count 1
-```
-
-Seed rollback removes the tracking record, allowing the seed to be re-applied. It does NOT reverse the data changes — that's your responsibility if needed.
-
-After rollback:
+Output:
 
 ```
 Seeds for database 'primary':
-  V0001  initial_admin_users             applied  2025-01-15 10:30:00
-  V0002  demo_products                   pending
+  C0001  initial countries                 applied  2025-01-15 10:30:00  (code seed)
+  V0001  initial_admin_users              applied  2025-01-15 10:31:00
 ```
 
-## Step 6: Python Seeds
-
-Seeds can also be Python files:
+### Python File Seeds
 
 ```bash
 dbwarden seed create "generate sample data" --database primary --type python
 ```
 
-Creates `seeds/V0003__generate_sample_data.py`:
+Creates `seeds/V0002__generate_sample_data.py` with a `seed(connection, session)` function.
 
-```python
-"""Seed: generate sample data for database: primary."""
+## Step 6: Roll Back a Seed
 
-
-def seed(connection, session):
-    """Populate seed data.
-
-    Args:
-        connection: SQLAlchemy raw DB-API connection.
-        session: SQLAlchemy ORM Session.
-    """
-    # Use session for ORM access:
-    # session.add(MyModel(...))
-    # session.flush()
+```bash
+dbwarden seed rollback --database primary --count 1
 ```
 
-The `seed()` function receives both a raw connection and an ORM session. Use whichever fits:
+Seed rollback removes the tracking record, allowing the seed to be re-applied. It does **not** reverse the data changes — that is your responsibility if needed.
 
-```python
-# Using raw connection
-def seed(connection, session):
-    for i in range(10):
-        connection.execute(
-            "INSERT INTO tags (name) VALUES (:name)",
-            {"name": f"tag_{i}"},
-        )
+After rollback:
 
-# Using ORM session
-def seed(connection, session):
-    for i in range(10):
-        session.add(Tag(name=f"tag_{i}"))
-    session.flush()
+```
+Seeds for database 'primary':
+  C0001  initial countries                 applied  2025-01-15 10:30:00  (code seed)
+  V0001  initial_admin_users              pending
 ```
 
-## Bonus: In-Code Seeds with `@seed_data`
+## Step 7: Prune Orphaned Records
 
-Seeds can also live alongside your models using the `@seed_data` decorator:
+Remove tracking records for seed files that no longer exist on disk:
 
-```python
-from dbwarden.schema import seed_data, SeedRow
-
-@seed_data(
-    database="primary",
-    version="0004",
-    description="initial countries",
-    on_conflict="update",
-    conflict_columns=["code"],
-)
-class CountrySeed:
-    model = Country
-
-    rows = [
-        SeedRow(code="UY", name="Uruguay"),
-        SeedRow(code="AR", name="Argentina"),
-    ]
+```bash
+dbwarden seed list --prune
 ```
-
-These are discovered through the same `model_paths` scan as models and interleave with file seeds by version number.
 
 ## Key Takeaways
 
-- Seeds are versioned data files stored in `seeds/` alongside migrations
-- SQL seeds are plain `.sql` files; Python seeds have a `seed(connection, session)` function
-- `seed apply` tracks each version — it can only run once
-- `seed rollback` removes the tracking record to allow re-application
-- `seed list` shows applied and pending seeds
-- `@seed_data` keeps seed logic close to the model it populates
-- Seeds and migrations are independent — you can use one without the other
+- **Code seeds (`Seed` base class) are the recommended approach** — no manual versions, full IDE support, stays in sync with models
+- `auto_apply_seeds: True` or `dbwarden migrate --apply-seeds` applies seeds automatically after migrations
+- File seeds (`.sql` / `.py`) are still available for complex multi-statement SQL
+- `seed list --prune` cleans up orphaned tracking records
+- Seed rollback removes the tracking record — it does not undo data
 
 ## Related Documentation
 

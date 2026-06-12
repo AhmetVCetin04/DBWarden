@@ -34,8 +34,8 @@ Manage seed data for a database.
 
 ## Subcommands
 
-- `seed create`: create a new seed file
-- `seed apply`: apply pending seeds
+- `seed create`: create a new file seed (legacy)
+- `seed apply`: apply pending seeds (file + code seeds)
 - `seed list`: list seeds and their status
 - `seed rollback`: roll back applied seeds
 
@@ -43,7 +43,7 @@ Manage seed data for a database.
 
 ## `seed create`
 
-Create a new seed file.
+Create a new file-based seed file (SQL or Python). For new projects, prefer [code seeds](../seeds.md#code-seeds-recommended) instead.
 
 ### Usage
 
@@ -63,7 +63,7 @@ dbwarden seed create "populate lookup tables" --database primary --type python
 
 ## `seed apply`
 
-Apply pending seeds.
+Apply pending seeds. Both file seeds and [code seeds](../seeds.md#code-seeds-recommended) are discovered and applied.
 
 ### Usage
 
@@ -87,26 +87,28 @@ dbwarden seed apply --all
 
 ## `seed list`
 
-List seeds and their applied status.
+List seeds and their applied status. Includes both file seeds and code seeds.
 
 ### Usage
 
 ```bash
 dbwarden seed list --database primary
 dbwarden seed list --all
+dbwarden seed list --prune              # clean up orphaned tracking records
 ```
 
 ### Options
 
 - `--database`, `-d`
 - `--all`, `-a`
+- `--prune`: remove tracking records for seed files that no longer exist on disk
 - `--verbose`, `-v`
 
 ---
 
 ## `seed rollback`
 
-Roll back applied seeds.
+Roll back applied seeds. Removes the tracking record, allowing the seed to be re-applied. Does **not** reverse data changes.
 
 ### Usage
 
@@ -119,8 +121,9 @@ dbwarden seed rollback --database primary --to-version 0003
 ### Options
 
 - `--database`, `-d`
-- `--count`: number of seeds to roll back (default: 1)
-- `--to-version`: roll back to this seed version
+- `--all`, `-a`: rollback on all databases
+- `--count`, `-c`: number of seeds to roll back (default: 1)
+- `--to-version`, `-t`: roll back to this seed version
 - `--verbose`, `-v`
 
 See also: [Seed Management](../seeds.md)

@@ -41,14 +41,143 @@ DBWarden provides built-in seed data management for populating databases with in
 
 ## Overview
 
-Seeds are versioned data files stored in a `seeds/` directory alongside your migrations. Each seed file is tracked in the database so it can be applied once and re-applied if rolled back.
+There are two ways to define seeds, listed in order of preference:
 
-- **SQL seeds**: plain SQL files for INSERT/UPDATE statements
-- **Python seeds**: Python files with a `seed()` function for programmatic data generation
+1. **Code seeds** (recommended) — define seeds inline alongside your SQLAlchemy models using the `Seed` base class or `@seed_data` decorator. No separate files, no manual versioning.
+2. **File seeds** — traditional `.sql` or `.py` files in a `seeds/` directory, useful for complex multi-statement SQL.
 
-## Seed directory structure
+Both are tracked in the `_dbwarden_seeds` table and applied via `dbwarden seed apply`.
 
-Seeds live in a `seeds/` directory at your project root (or next to your migration directories):
+---
+
+## Code Seeds (Recommended)
+
+Code seeds live alongside your models in your `model_paths` directories. They are the recommended way to define seed data because they stay in sync with your schema, support IDE autocompletion, and do not require manual version management.
+
+### Seed Base Class
+
+Inherit from `Seed` and set a `model` + `rows`:
+
+```python
+from dbwarden.seed import Seed
+
+class CountrySeed(Seed):
+    __seed_database__ = "primary"
+    __seed_description__ = "initial countries"
+    __seed_on_conflict__ = "update"
+    __seed_conflict_columns__ = ["code"]
+
+    model = Country
+    rows = [
+        Country(code="UY", name="Uruguay"),
+        Country(code="AR", name="Argentina"),
+    ]
+```
+
+Key advantages over the old decorator approach:
+
+- **Full IDE autocompletion** — `rows` uses model instances directly, so your editor knows the column names and types
+- **No `version` parameter** — versions are auto-assigned (`C0001`, `C0002`, ...) based on deterministic class ordering
+- **No manual import of `SeedRow`** — though `SeedRow` is still available if you prefer dict-like rows
+
+### Model Instances in Rows
+
+Because `rows` accepts model instances, you get full autocompletion from your `Mapped` annotations:
+
+```python
+from dbwarden.seed import Seed
+
+class RepoSeed(Seed):
+    __seed_database__ = "clickhouse"
+    __seed_description__ = "Tracked Repos"
+
+    model = Repo
+    rows = [
+        Repo(name="dbwarden", owner="anomalyco", is_org=True, default_branch="main"),
+        Repo(name="vigil", owner="anomalyco", is_org=True, default_branch="master"),
+    ]
+```
+
+Your editor will suggest `name`, `owner`, `is_org`, `default_branch` etc. as you type.
+
+### SeedRow (Alternative)
+
+If you prefer dict-like rows, `SeedRow` still works:
+
+```python
+from dbwarden.seed import Seed, SeedRow
+
+class CountrySeed(Seed):
+    __seed_database__ = "primary"
+    __seed_description__ = "initial countries"
+    __seed_on_conflict__ = "update"
+    __seed_conflict_columns__ = ["code"]
+
+    model = Country
+    rows = [
+        SeedRow(code="UY", name="Uruguay"),
+        SeedRow(code="AR", name="Argentina"),
+    ]
+```
+
+### `on_conflict` Behavior
+
+| Value | Behavior |
+|-------|----------|
+| `"ignore"` (default) | Skips existing rows silently |
+| `"update"` | Updates existing rows with new values |
+| `"error"` | Raises an error on conflict |
+
+### Logic-Based Seeds
+
+Define a `generate(session)` static/class method for programmatic data:
+
+```python
+class PermissionSeed(Seed):
+    __seed_database__ = "primary"
+    __seed_description__ = "load permissions"
+    __seed_on_conflict__ = "ignore"
+
+    model = Permission
+
+    @staticmethod
+    def generate(session):
+        for resource in ["users", "orders"]:
+            for action in ["read", "write", "delete"]:
+                session.add(Permission(name=f"{resource}:{action}"))
+```
+
+### `@seed_data` Decorator (Deprecated)
+
+The old decorator still works but is deprecated in favour of the `Seed` base class:
+
+```python
+from dbwarden.schema import seed_data, SeedRow
+
+@seed_data(
+    database="primary",
+    description="initial countries",
+    on_conflict="update",
+    conflict_columns=["code"],
+)
+class CountrySeed:
+    model = Country
+    rows = [SeedRow(code="UY", name="Uruguay")]
+```
+
+Note that `version` is **no longer required** — it is auto-assigned.
+
+### Discovery and Ordering
+
+Code seeds are discovered through the same `model_paths` scan as models. They use auto-assigned versions in the `C` namespace (`C0001`, `C0002`, ...) and are sorted deterministically by module and class name. Pending detection compares the class qualified name against the `_dbwarden_seeds` tracking table.
+
+---
+
+## File Seeds (Traditional)
+
+File seeds live in a `seeds/` directory and are useful for complex multi-statement SQL or when you need to hand-craft seed files.
+
+### Directory Structure
 
 ```
 seeds/
@@ -63,52 +192,27 @@ Each file follows the naming convention:
 V<4-digit-version>__<description>.<sql|py>
 ```
 
-## Creating seeds
-
-### SQL seed
+### Creating File Seeds
 
 ```bash
 dbwarden seed create "seed initial users" --database primary
 ```
 
-This creates a new file like `seeds/V0001__seed_initial_users.sql` containing a template:
+Creates a file like `seeds/V0001__seed_initial_users.sql`:
 
 ```sql
--- Seed: seed initial users
--- Database: primary
--- Applied once and tracked in _dbwarden_seeds
-
 -- INSERT statements go here
 ```
 
-### Python seed
+### Python File Seeds
 
 ```bash
 dbwarden seed create "generate sample data" --database primary --type python
 ```
 
-Creates `seeds/V0001__generate_sample_data.py`:
+Creates `seeds/V0001__generate_sample_data.py` with a `seed(connection, session)` function.
 
-```python
-"""Seed: generate sample data for database: primary."""
-
-
-def seed(connection, session):
-    """Populate seed data.
-
-    Args:
-        connection: SQLAlchemy raw DB-API connection.
-        session: SQLAlchemy ORM Session.
-    """
-    # Use session for ORM access:
-    # session.add(MyModel(...))
-    # session.flush()
-
-    # Or use connection for raw SQL:
-    # connection.execute("INSERT INTO ...")
-```
-
-The `seed()` function receives **two** arguments: a raw SQLAlchemy `Connection` and an ORM `Session` bound to the same transaction. Use the one that fits your style:
+The `seed()` function receives both a raw SQLAlchemy `Connection` and an ORM `Session` bound to the same transaction:
 
 ```python
 # Using raw connection
@@ -126,86 +230,11 @@ def seed(connection, session):
     session.flush()
 ```
 
-## In-Code Seed Definitions
+---
 
-DBWarden also supports seeds defined directly in your Python code alongside your models, using the `@seed_data` decorator. This keeps seed logic close to the model it populates.
+## Applying Seeds
 
-### Row-Based Seeds
-
-Define static rows with `SeedRow`:
-
-```python
-from dbwarden.schema import seed_data, SeedRow
-
-@seed_data(
-    database="primary",
-    version="0001",
-    description="initial countries",
-    on_conflict="update",
-    conflict_columns=["code"],
-)
-class CountrySeed:
-    model = Country
-    rows = [
-        SeedRow(code="UY", name="Uruguay"),
-        SeedRow(code="AR", name="Argentina"),
-    ]
-```
-
-`on_conflict` controls behavior when a row with matching `conflict_columns` already exists:
-
-| Value | Behavior |
-|-------|----------|
-| `"ignore"` (default) | Skips existing rows silently |
-| `"update"` | Updates existing rows with new values |
-| `"error"` | Raises an error on conflict |
-
-### Logic-Based Seeds
-
-Define a `generate(session)` static method for programmatic data:
-
-```python
-@seed_data(database="primary", version="0002", description="load permissions")
-class PermissionSeed:
-    model = Permission
-
-    @staticmethod
-    def generate(session):
-        for resource in ["users", "orders"]:
-            for action in ["read", "write", "delete"]:
-                session.add(Permission(name=f"{resource}:{action}"))
-```
-
-### Discovery and Tracking
-
-Code seeds are discovered through the same `model_paths` scan as models. They coexist with file-based seeds and are sorted together by `version` at apply time.
-
-Internally, each decorated class receives a `DBWardenSeed` instance as `cls.__dbwarden_seed__` containing the metadata (database, version, description, on_conflict, conflict_columns, source_hash).
-
-| Aspect | Behavior |
-|--------|----------|
-| Discovery | Scanned via `model_paths` alongside models |
-| Versioning | Same `V0001__...` scheme as file seeds |
-| Ordering | Code seeds and file seeds interleave by version |
-| Duplicate versions | Raises error at `seed apply` |
-| Source hash | Computed from class source; hash change warns at apply time |
-
-### Mixing File and Code Seeds
-
-File seeds and code seeds are compatible. You can migrate gradually:
-
-```text
-seeds/
-  V0001__seed_initial_users.sql       # existing file seed
-  V0002__seed_lookup_tables.sql       # existing file seed
-
-# app/models/seeds.py                  # new code seeds
-# @seed_data(version="0003", ...)     # sorted after V0002
-```
-
-## Applying seeds
-
-Apply all pending seeds:
+Apply all pending seeds (file + code seeds are both discovered):
 
 ```bash
 dbwarden seed apply --database primary
@@ -223,7 +252,7 @@ Apply to all databases:
 dbwarden seed apply --all
 ```
 
-### Dry run
+### Dry Run
 
 Preview what would be applied without executing:
 
@@ -231,9 +260,30 @@ Preview what would be applied without executing:
 dbwarden seed apply --database primary --dry-run
 ```
 
-## Listing seeds
+### Auto-Apply After Migrations
 
-View which seeds have been applied (includes both file and code seeds):
+Configure seeds to be applied automatically after each `dbwarden migrate`:
+
+```python
+database_config(
+    database_name="primary",
+    default=True,
+    database_type="sqlite",
+    database_url_sync="sqlite:///./app.db",
+    model_paths=["models"],
+    auto_apply_seeds=True,
+)
+```
+
+Or apply seeds once after a migration without changing config:
+
+```bash
+dbwarden migrate --apply-seeds
+```
+
+---
+
+## Listing Seeds
 
 ```bash
 dbwarden seed list --database primary
@@ -244,9 +294,7 @@ Output:
 ```
 Seeds for database 'primary':
   V0001  seed_initial_users                   applied  2025-06-01 10:00:00
-  V0002  seed_lookup_tables                   applied  2025-06-01 10:01:00
-  V0003  generate_sample_data                 pending
-  V0004  initial countries                    pending   (code seed)
+  C0001  initial countries                    pending   (code seed)
 ```
 
 List across all databases:
@@ -255,9 +303,19 @@ List across all databases:
 dbwarden seed list --all
 ```
 
-## Rolling back seeds
+### Pruning Orphaned Records
 
-Rollback removes the applied tracking record, allowing the seed to be re-applied. It does not reverse the data changes.
+Remove tracking records for seed files that no longer exist on disk:
+
+```bash
+dbwarden seed list --prune
+```
+
+---
+
+## Rolling Back Seeds
+
+Rollback removes the applied tracking record, allowing the seed to be re-applied. It does **not** reverse data changes.
 
 ```bash
 # Rollback the most recent seed
@@ -270,31 +328,36 @@ dbwarden seed rollback --database primary --count 2
 dbwarden seed rollback --database primary --to-version 0002
 ```
 
-## Seed tracking
+---
 
-DBWarden tracks applied seeds in a database table (default: `_dbwarden_seeds`). The table name is configurable per-database via the `seed_table` parameter in `database_config(...)`:
+## Seed Tracking Table
 
-```python
-primary = database_config(
-    database_name="primary",
-    default=True,
-    database_type="postgresql",
-    database_url_sync="postgresql://localhost/myapp",
-    seed_table="custom_seeds",
-)
-```
+DBWarden tracks applied seeds in `_dbwarden_seeds` (configurable via `seed_table`):
 
 | Column | Description |
 |--------|-------------|
-| `version` | 4-digit seed version number |
-| `description` | human-readable description from filename |
-| `seed_type` | `sql` or `python` |
-| `checksum` | SHA-256 of file content |
-| `applied_at` | timestamp of application |
+| `version` | 4-digit seed version (`V0001`) or code seed ID (`C0001`) |
+| `description` | Human-readable description |
+| `filename` | File path or code seed identifier |
+| `seed_type` | `sql`, `python`, or `code` |
+| `checksum` | SHA-256 hash of file/class source |
+| `applied_at` | Timestamp of application |
 
-The tracking table is created automatically on first seed apply. Seeds are idempotent by tracking: each version can only be applied once until rolled back.
+The tracking table is created automatically on first seed apply. Each version can only be applied once until rolled back.
 
-## Seeds and migrations
+### Checksum Drift
+
+When a seed file has been modified since it was last applied, DBWarden emits a warning:
+
+```
+Warning: Seed V0001 has been modified since last apply (checksum mismatch).
+```
+
+This helps detect accidental changes to already-applied seeds.
+
+---
+
+## Seeds and Migrations
 
 Seeds are independent from migrations. You can:
 
@@ -303,6 +366,8 @@ Seeds are independent from migrations. You can:
 - Mix both in your workflow
 
 The `dbwarden status` command and the FastAPI `GET /status` endpoint report both pending migrations and pending seeds.
+
+---
 
 ## Seeds in FastAPI
 
@@ -328,4 +393,3 @@ The `DBWardenRouter` includes seed status in its `GET /status` response:
 See [FastAPI Reference](fastapi/reference.md) for details.
 
 See also: [Cookbook: Seeds](../cookbook/07-seeds.md)
-
