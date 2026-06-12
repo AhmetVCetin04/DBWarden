@@ -63,4 +63,4 @@ dbwarden migrate --database primary --baseline --to-version 0005
 - executes versioned + repeatable migrations
 - uses lock protection to prevent concurrent migration mutation
 
-See also: [Applying Migrations](../tutorial/applying-migrations.md)
+See also: [Your First Migration](../getting-started/first-migration.md)

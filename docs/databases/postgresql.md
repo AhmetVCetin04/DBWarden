@@ -143,7 +143,8 @@ Use `PGColumnMeta` inner classes for per-column metadata. The inner class must b
 
 ```python
 from sqlalchemy.orm import DeclarativeBase
-from dbwarden import PGTableMeta, PGColumnMeta, pg
+from dbwarden import PGTableMeta, PGColumnMeta
+from dbwarden.schema import pg
 
 class Base(DeclarativeBase):
     pass
@@ -365,7 +366,7 @@ dbwarden generate-models -d primary
 Generated output for a table with identity, storage, compression, collation, and fillfactor:
 
 ```python
-from dbwarden import pg
+from dbwarden.schema import pg
 
 class User(Base):
     __tablename__ = "users"

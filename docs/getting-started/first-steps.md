@@ -151,7 +151,6 @@ Use status to confirm pending/applied counts and history to confirm execution or
 ## Next Steps
 
 - [Configuration](../configuration/index.md)
-- [Your First Migration](../tutorial/your-first-migration.md)
-- [Applying Migrations](../tutorial/applying-migrations.md)
-
+- [Your First Migration](first-migration.md)
+- [Developing Locally](developing-locally.md)
 

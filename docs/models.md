@@ -34,7 +34,7 @@ seo:
 
 # SQLAlchemy Models Reference
 
-This page is the **reference** for all supported Meta attributes across every backend. For a step-by-step walkthrough of defining models, see the [Modeling Guide](tutorial/modeling.md).
+This page is the **reference** for all supported Meta attributes across every backend. For a step-by-step walkthrough of defining models, see the [Modeling Guide](getting-started/modeling.md).
 
 DBWarden reads SQLAlchemy model metadata to generate migration SQL. Use `model_paths` in your `database_config(...)` entries to control discovery.
 
@@ -102,7 +102,8 @@ These attributes work with any `database_type`. Backend-specific subclasses (`PG
 For IDE autocomplete on column-level inner classes, use `PGColumnMeta` for PostgreSQL or `CHColumnMeta` for ClickHouse. Both inherit from `FieldMeta`, which defines cross-database attributes (`comment`, `public`) and backend-specific spec objects (`pg`, `ch`, `my`, `mdb`, `sq`):
 
 ```python
-from dbwarden import FieldMeta, pg
+from dbwarden import FieldMeta
+from dbwarden.schema import pg
 
 # Use typed spec objects for backend-specific column attributes:
 #   pg = pg.field(collation=..., storage=..., ...)
@@ -113,7 +114,7 @@ Backend-specific options are always set via a typed spec object attribute — ne
 
 ### Backend Subpackages
 
-DBWarden organizes backend-specific types into subpackages under `dbwarden.schema`, also available as short aliases:
+DBWarden organizes backend-specific types into subpackages under `dbwarden.schema`, also available there as short aliases:
 
 | Alias | Subpackage | Key types |
 |-------|------------|-----------|
@@ -124,7 +125,7 @@ DBWarden organizes backend-specific types into subpackages under `dbwarden.schem
 | `sq` | `dbwarden.schema.sqlite` | `SqFieldSpec`, `SqTableSpec` |
 
 ```python
-from dbwarden import pg, ch, my, mdb, sq
+from dbwarden.schema import pg, ch, my, mdb, sq
 
 # Use pg.field(), ch.field() for column-level metadata
 pg_spec = pg.field(collation="en_US.UTF-8", storage="PLAIN")
@@ -164,7 +165,8 @@ Use `PGColumnMeta` inner classes named after the column. Use `pg = pg.field(...)
 
 ```python
 from sqlalchemy.orm import DeclarativeBase
-from dbwarden import PGTableMeta, PGColumnMeta, pg
+from dbwarden import PGTableMeta, PGColumnMeta
+from dbwarden.schema import pg
 
 class Base(DeclarativeBase):
     pass
@@ -232,7 +234,8 @@ Use `CHColumnMeta` inner classes named after the column. Use `ch = ch.field(...)
 
 ```python
 from sqlalchemy.orm import DeclarativeBase
-from dbwarden import CHTableMeta, CHColumnMeta, ChEngineSpec, ch
+from dbwarden import CHTableMeta, CHColumnMeta, ChEngineSpec
+from dbwarden.schema import ch
 
 class Base(DeclarativeBase):
     pass
@@ -380,7 +383,7 @@ Column types render as CH-native types (`Int64`, `String`).
 Use `CHColumnMeta` inner classes for per-column hints instead of `info={}`:
 
 ```python
-from dbwarden import ch
+from dbwarden.schema import ch
 
 class Meta(CHTableMeta):
     class payload(CHColumnMeta):

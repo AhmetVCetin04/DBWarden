@@ -1,0 +1,155 @@
+---
+description: Organize larger DBWarden workflows, including multi-database projects, CI patterns, sandbox validation, and command conventions across environments.
+seo:
+  title: Workflows - DBWarden Documentation
+  description: Organize larger DBWarden workflows, including multi-database projects, CI patterns, sandbox validation, and command conventions across environments.
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/getting-started/workflows/
+  robots: index,follow
+  og:
+    type: website
+    title: Workflows - DBWarden Documentation
+    description: Organize larger DBWarden workflows, including multi-database projects, CI patterns, sandbox validation, and command conventions across environments.
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/getting-started/workflows/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: Workflows - DBWarden Documentation
+    description: Organize larger DBWarden workflows, including multi-database projects, CI patterns, sandbox validation, and command conventions across environments.
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: Workflows - DBWarden Documentation
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/getting-started/workflows/
+    description: Organize larger DBWarden workflows, including multi-database projects, CI patterns, sandbox validation, and command conventions across environments.
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+---
+
+# Workflows
+
+This guide covers larger day-to-day workflows once the basics are in place.
+
+## Multi-Database Projects
+
+DBWarden can manage more than one database from one config source.
+
+```python
+from dbwarden import database_config
+
+
+primary = database_config(
+    database_name="primary",
+    default=True,
+    database_type="postgresql",
+    database_url_sync="postgresql://user:password@localhost:5432/main",
+    model_paths=["app.models"],
+)
+
+analytics = database_config(
+    database_name="analytics",
+    database_type="clickhouse",
+    database_url_sync="clickhouse://default:@localhost:8123/analytics",
+    model_paths=["app.analytics_models"],
+)
+```
+
+Apply migrations per database:
+
+```bash
+dbwarden migrate --database primary
+dbwarden migrate --database analytics
+```
+
+Show status across all configured databases:
+
+```bash
+dbwarden status --all
+```
+
+## Separate Model Sets
+
+Each database should usually own a distinct model set through `model_paths`. DBWarden validates overlapping paths unless `overlap_models=True` is set explicitly.
+
+This prevents one model tree from being interpreted as belonging to multiple databases by accident.
+
+## CI Workflows
+
+A common CI pattern is:
+
+```bash
+dbwarden export-models --database primary
+dbwarden make-migrations "ci validation" --offline --database primary
+dbwarden check --database primary
+```
+
+This keeps schema generation deterministic and avoids depending on a live database in every pipeline step.
+
+For a full example, see [Cookbook: Offline & CI](../cookbook/04-offline-ci.md).
+
+## Sandbox Validation
+
+Before applying migrations to a real environment, you can validate them in a temporary sandbox database.
+
+```bash
+dbwarden migrate --sandbox --database primary
+```
+
+This is especially useful for complex migrations, risky type changes, and CI gates.
+
+## Baselines and Partial Applies
+
+When integrating DBWarden into an existing environment, or when applying only part of a migration sequence, these patterns are common:
+
+```bash
+dbwarden migrate --database primary --baseline --to-version 0005
+dbwarden migrate --database primary --count 2
+dbwarden rollback --database primary --to-version 0007
+```
+
+Use these modes carefully. They are operational tools, not everyday authoring commands.
+
+## Operational Command Pattern
+
+A typical production-safe pattern is:
+
+```bash
+dbwarden check --database primary
+dbwarden make-migrations "release change" --database primary
+dbwarden migrate --database primary
+dbwarden status --database primary
+dbwarden history --database primary
+```
+
+This keeps planning, execution, and verification as separate visible steps.
+
+## Rollback Command Pattern
+
+When validating rollback quality, use a loop like this:
+
+```bash
+dbwarden migrate --database primary
+dbwarden rollback --count 1 --database primary
+dbwarden migrate --database primary
+```
+
+This verifies both directions of the migration before a release depends on them.
+
+## Where to Go Next
+
+- Use [Cookbook & Examples](../cookbook/index.md) for full working flows
+- Use [Configuration](../configuration/index.md) for deeper config behavior
+- Use [CLI Reference](../cli-reference.md) for command details
+
+## Recap
+
+You have seen how to:
+
+- manage multiple databases from one config source
+- separate models by database
+- use offline and CI-friendly workflows
+- validate migrations in a sandbox
+- keep operational commands explicit and repeatable

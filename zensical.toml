@@ -58,15 +58,15 @@ name = "DBWarden on PyPI"
 "Overview" = "index.md"
 
 [[project.nav]]
-"Getting Started" = [
-  {Installation = "installation.md"},
-  {"First Steps" = "getting-started/first-steps.md"},
-  {"Your First Migration" = "tutorial/your-first-migration.md"},
-  {"Checking Status" = "tutorial/checking-status.md"},
-  {"Applying Migrations" = "tutorial/applying-migrations.md"},
-  {"Rolling Back" = "tutorial/rolling-back.md"},
-  {"Dev Mode" = "tutorial/dev-mode.md"},
-  {"Multi-Database Setup" = "tutorial/multi-database-setup.md"},
+"Features" = "features.md"
+
+[[project.nav]]
+"Get Started" = [
+  {"Setup" = "getting-started/setup.md"},
+  {"Modeling" = "getting-started/modeling.md"},
+  {"Your First Migration" = "getting-started/first-migration.md"},
+  {"Developing Locally" = "getting-started/developing-locally.md"},
+  {"Workflows" = "getting-started/workflows.md"},
 ]
 
 [[project.nav]]
@@ -105,7 +105,6 @@ name = "DBWarden on PyPI"
   {"SQLAlchemy Models" = "models.md"},
   {Seeds = "seeds.md"},
   {"SQL Translation" = "sql-translation.md"},
-  {"Modeling Guide" = "tutorial/modeling.md"},
   {Observability = "observability.md"},
   {Architecture = "architecture-deep-dive.md"}
 ]

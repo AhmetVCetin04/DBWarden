@@ -53,4 +53,4 @@ dbwarden new "update view" --database primary --type roc
 - use when change is not model-driven
 - file is scaffolded with `-- upgrade` and `-- rollback` sections
 
-See also: [Your First Migration](../tutorial/your-first-migration.md)
+See also: [Your First Migration](../getting-started/first-migration.md)

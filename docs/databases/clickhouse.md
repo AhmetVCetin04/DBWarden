@@ -240,7 +240,8 @@ Use `CHColumnMeta` inner classes for per-column metadata. The inner class must b
 
 ```python
 from sqlalchemy.orm import DeclarativeBase
-from dbwarden import CHTableMeta, CHColumnMeta, ChEngineSpec, ch
+from dbwarden import CHTableMeta, CHColumnMeta, ChEngineSpec
+from dbwarden.schema import ch
 
 class Base(DeclarativeBase):
     pass
@@ -479,7 +480,8 @@ Generated output for a table with engine, ordering, partitioning, codec, and pro
 
 ```python
 from sqlalchemy.orm import DeclarativeBase
-from dbwarden import CHTableMeta, CHColumnMeta, ChEngineSpec, ProjectionSpec, ch
+from dbwarden import CHTableMeta, CHColumnMeta, ChEngineSpec, ProjectionSpec
+from dbwarden.schema import ch
 
 class Base(DeclarativeBase):
     pass
@@ -563,4 +565,4 @@ dbwarden migrate -d analytics
 
 Use `dbwarden make-migrations --plan -d analytics` to preview the ops without writing files.
 
-See [models.md](../models.md) for detailed ClickHouse model examples and [Modeling Guide](../tutorial/modeling.md) for a complete walkthrough.
+See [models.md](../models.md) for detailed ClickHouse model examples and [Modeling Guide](../getting-started/modeling.md) for a complete walkthrough.

@@ -52,4 +52,4 @@ dbwarden rollback --database primary --to-version 0007
 - rollback runs in reverse order
 - same lock discipline as migrate
 
-See also: [Rolling Back](../tutorial/rolling-back.md)
+See also: [Your First Migration](../getting-started/first-migration.md)

@@ -1,0 +1,265 @@
+---
+description: Overview of DBWarden features, with short examples for migrations, safety checks, multi-database configs, FastAPI integration, seed management, and more.
+seo:
+  title: Features - DBWarden Documentation
+  description: Overview of DBWarden features, with short examples for migrations, safety checks, multi-database configs, FastAPI integration, seed management, and more.
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/features/
+  robots: index,follow
+  og:
+    type: website
+    title: Features - DBWarden Documentation
+    description: Overview of DBWarden features, with short examples for migrations, safety checks, multi-database configs, FastAPI integration, seed management, and more.
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/features/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: Features - DBWarden Documentation
+    description: Overview of DBWarden features, with short examples for migrations, safety checks, multi-database configs, FastAPI integration, seed management, and more.
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: Features - DBWarden Documentation
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/features/
+    description: Overview of DBWarden features, with short examples for migrations, safety checks, multi-database configs, FastAPI integration, seed management, and more.
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+---
+
+# Features
+
+This page gives a compact overview of the main DBWarden features, with short examples. Use it to understand the surface area of the tool before diving into the guides and reference pages.
+
+## SQL-First Migrations
+
+DBWarden writes migrations as plain SQL files. Each file contains both an `--upgrade` section and a `--rollback` section.
+
+```sql
+-- upgrade
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) NOT NULL UNIQUE
+);
+
+-- rollback
+DROP TABLE users;
+```
+
+This keeps schema changes reviewable in code review and runnable without hidden ORM magic.
+
+## Typed Database Configuration
+
+Configure one or many databases with explicit `database_config(...)` calls.
+
+```python
+from dbwarden import database_config
+
+
+primary = database_config(
+    database_name="primary",
+    default=True,
+    database_type="postgresql",
+    database_url_sync="postgresql://user:password@localhost:5432/main",
+    model_paths=["app.models"],
+)
+
+analytics = database_config(
+    database_name="analytics",
+    database_type="clickhouse",
+    database_url_sync="clickhouse://default:@localhost:8123/analytics",
+    model_paths=["app.analytics_models"],
+)
+```
+
+Each entry is validated before use, including database names, table names, `model_paths`, and duplicate target detection.
+
+## Model-Driven Migration Generation
+
+DBWarden reads SQLAlchemy models, diffs them against the live schema or an offline model state, and emits SQL.
+
+```bash
+dbwarden make-migrations "add posts table" --database primary
+```
+
+Typical output:
+
+```text
+Created migration: migrations/primary/primary__0002_add_posts_table.sql
+```
+
+## Backend-Specific Metadata
+
+PostgreSQL and ClickHouse support first-class metadata through `class Meta`.
+
+PostgreSQL example:
+
+```python
+from dbwarden import PGTableMeta, PGColumnMeta
+
+
+class Meta(PGTableMeta):
+    pg_fillfactor = 80
+
+    class id(PGColumnMeta):
+        pg_identity = "always"
+```
+
+ClickHouse example:
+
+```python
+from dbwarden import CHTableMeta, ChEngineSpec, ChIndexSpec
+
+
+class Meta(CHTableMeta):
+    ch_engine = ChEngineSpec("MergeTree")
+    ch_order_by = ["event_date", "id"]
+    ch_indexes = [
+        ChIndexSpec("ix_payload", ["payload"], type="bloom_filter", granularity=1),
+    ]
+```
+
+## Safety Classification
+
+Use `check` to classify changes before generating or applying SQL.
+
+```bash
+dbwarden check --database primary
+```
+
+Example output:
+
+```text
+SAFE      add column users.bio
+WARN      shrink varchar users.email
+CRITICAL  drop table audit_log
+```
+
+Safety levels are `SAFE`, `INFO`, `WARN`, and `CRITICAL`.
+
+## Read-Only Schema Diffing
+
+Use `diff` when you want to inspect differences without writing migration files.
+
+```bash
+dbwarden diff --database primary
+```
+
+This is useful during reviews, debugging, and CI checks.
+
+## Reverse-Engineering Models
+
+Generate SQLAlchemy model code from a live database.
+
+```bash
+dbwarden generate-models --database primary --tables users,posts
+```
+
+This is useful when adopting DBWarden in an existing project, documenting an inherited schema, or recovering model definitions.
+
+## Offline Migrations
+
+DBWarden can generate migrations without connecting to a live database, by diffing current models against an exported model state.
+
+```bash
+dbwarden export-models --database primary
+dbwarden make-migrations "offline change" --offline --database primary
+```
+
+This is useful for CI pipelines and restricted environments.
+
+## Multi-Database Workflows
+
+Manage multiple backends from one repository, each with its own migration directory and model set.
+
+```bash
+dbwarden migrate --database primary
+dbwarden migrate --database analytics
+```
+
+You can also show status across all configured databases:
+
+```bash
+dbwarden status --all
+```
+
+## Dev Mode
+
+Use `--dev` to point a configured database at a separate development target.
+
+```python
+primary = database_config(
+    database_name="primary",
+    default=True,
+    database_type="postgresql",
+    database_url_sync="postgresql://user:password@localhost:5432/main",
+    dev_database_type="sqlite",
+    dev_database_url="sqlite:///./development.db",
+)
+```
+
+```bash
+dbwarden --dev make-migrations "test locally" --database primary
+dbwarden --dev migrate --database primary
+```
+
+## Seed Management
+
+DBWarden tracks SQL and Python seed files separately from schema migrations.
+
+```bash
+dbwarden seed create "load countries" --type sql --database primary
+dbwarden seed apply --database primary
+dbwarden seed list --database primary
+```
+
+This is useful for reference data, lookup tables, and repeatable environment setup.
+
+## FastAPI Integration
+
+`database_config(...)` returns a `DatabaseHandle` that can be used directly in FastAPI dependencies.
+
+```python
+from fastapi import APIRouter
+from .dbwarden import primary
+
+
+router = APIRouter()
+
+
+@router.get("/users")
+async def list_users(session: primary.async_session):
+    ...
+```
+
+This gives one shared source of truth for migrations, runtime connections, and session injection.
+
+## Sandbox Testing
+
+Apply migrations in a temporary sandbox database before applying them for real.
+
+```bash
+dbwarden migrate --sandbox --database primary
+```
+
+This is useful when validating generated SQL against a throwaway environment.
+
+## Status, History, and Rollback
+
+DBWarden includes built-in commands for operational visibility.
+
+```bash
+dbwarden status --database primary
+dbwarden history --database primary
+dbwarden rollback --count 1 --database primary
+```
+
+These commands make the migration lifecycle inspectable and reversible.
+
+## Next Steps
+
+- Follow [Get Started](getting-started/setup.md)
+- Explore [Cookbook & Examples](cookbook/index.md)
+- Use [CLI Reference](cli-reference.md) for command lookup

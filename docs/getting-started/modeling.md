@@ -1,35 +1,27 @@
 ---
 seo:
   title: Modeling Guide - DBWarden Documentation
-  description: This guide walks through the process of defining SQLAlchemy models
-    that DBWarden can read to generate migration SQL. For the complete reference of
-    all...
-  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/tutorial/modeling/
+  description: This guide walks through the process of defining SQLAlchemy models that DBWarden can read to generate migration SQL. For the complete reference of all supported Meta attributes, see the SQLAlchemy Models Reference.
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/getting-started/modeling/
   robots: index,follow
   og:
     type: website
     title: Modeling Guide - DBWarden Documentation
-    description: This guide walks through the process of defining SQLAlchemy models
-      that DBWarden can read to generate migration SQL. For the complete reference
-      of all...
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/tutorial/modeling/
+    description: This guide walks through the process of defining SQLAlchemy models that DBWarden can read to generate migration SQL. For the complete reference of all supported Meta attributes, see the SQLAlchemy Models Reference.
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/getting-started/modeling/
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: Modeling Guide - DBWarden Documentation
-    description: This guide walks through the process of defining SQLAlchemy models
-      that DBWarden can read to generate migration SQL. For the complete reference
-      of all...
+    description: This guide walks through the process of defining SQLAlchemy models that DBWarden can read to generate migration SQL. For the complete reference of all supported Meta attributes, see the SQLAlchemy Models Reference.
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: Modeling Guide - DBWarden Documentation
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/tutorial/modeling/
-    description: This guide walks through the process of defining SQLAlchemy models
-      that DBWarden can read to generate migration SQL. For the complete reference
-      of all...
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/getting-started/modeling/
+    description: This guide walks through the process of defining SQLAlchemy models that DBWarden can read to generate migration SQL. For the complete reference of all supported Meta attributes, see the SQLAlchemy Models Reference.
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
     publisher:
       '@type': Organization
@@ -96,7 +88,8 @@ When `database_type="postgresql"`, use `class Meta(PGTableMeta)` for table-level
 
 ```python
 from sqlalchemy.orm import DeclarativeBase
-from dbwarden import PGTableMeta, PGColumnMeta, pg
+from dbwarden import PGTableMeta, PGColumnMeta
+from dbwarden.schema import pg
 
 class Base(DeclarativeBase):
     pass
@@ -125,7 +118,8 @@ When `database_type="clickhouse"`, use `class Meta(CHTableMeta)` for table-level
 
 ```python
 from sqlalchemy.orm import DeclarativeBase
-from dbwarden import CHTableMeta, CHColumnMeta, ChEngineSpec, ChIndexSpec, ProjectionSpec, ch
+from dbwarden import CHTableMeta, CHColumnMeta, ChEngineSpec, ChIndexSpec, ProjectionSpec
+from dbwarden.schema import ch
 
 class Base(DeclarativeBase):
     pass
@@ -263,3 +257,5 @@ DBWarden emits SQL comment placeholders for unsupported operations with instruct
 - **Use `@auto_schema` for API projects**: generates Pydantic schemas from your model annotations. Fields with `public=False` or a leading `_` are excluded from `PublicSchema`.
 
 See also: [Cookbook: Models & Migrations](../cookbook/02-models-and-migrations.md)
+
+Next, continue with [Your First Migration](first-migration.md).

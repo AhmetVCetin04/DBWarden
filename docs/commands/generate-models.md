@@ -82,7 +82,8 @@ For PostgreSQL databases, `generate-models` reverse-engineers all supported meta
 
 ```python
 from sqlalchemy.orm import DeclarativeBase
-from dbwarden import PGTableMeta, PGColumnMeta, pg
+from dbwarden import PGTableMeta, PGColumnMeta
+from dbwarden.schema import pg
 
 class Base(DeclarativeBase):
     pass
@@ -127,7 +128,8 @@ For ClickHouse databases, `generate-models` reverse-engineers all supported meta
 
 ```python
 from sqlalchemy.orm import DeclarativeBase
-from dbwarden import CHTableMeta, CHColumnMeta, ChEngineSpec, ProjectionSpec, ch
+from dbwarden import CHTableMeta, CHColumnMeta, ChEngineSpec, ProjectionSpec
+from dbwarden.schema import ch
 
 class Base(DeclarativeBase):
     pass

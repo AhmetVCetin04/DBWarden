@@ -49,4 +49,4 @@ dbwarden status --all
 - run before and after migration execution
 - supports multi-database status with `--all`
 
-See also: [Checking Status](../tutorial/checking-status.md)
+See also: [Your First Migration](../getting-started/first-migration.md)

@@ -179,7 +179,7 @@ class User(Base):
 
 ## Related Documentation
 
-- [Modeling Guide: Auto-Generated Schemas](../tutorial/modeling.md#auto-generated-pydantic-schemas-with-auto_schema)
+- [Modeling Guide: Auto-Generated Schemas](../getting-started/modeling.md#auto-generated-pydantic-schemas-with-auto_schema)
 - [SQLAlchemy Models Reference](../models.md)
 
 ## Next

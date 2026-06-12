@@ -50,4 +50,4 @@ dbwarden check-db --database primary --out yaml
 - useful for schema inspection and diagnostics
 - complements `status` and `history`
 
-See also: [Checking Status](../tutorial/checking-status.md)
+See also: [Your First Migration](../getting-started/first-migration.md)

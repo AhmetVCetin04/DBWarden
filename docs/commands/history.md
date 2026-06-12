@@ -47,4 +47,4 @@ dbwarden history --database primary
 - shows applied migrations, order, and timestamps
 - useful for audit and incident analysis
 
-See also: [Checking Status](../tutorial/checking-status.md)
+See also: [Your First Migration](../getting-started/first-migration.md)

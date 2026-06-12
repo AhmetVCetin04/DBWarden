@@ -1,38 +1,28 @@
 ---
-description: DBWarden is a SQL-first database migration system for Python and SQLAlchemy.
-  Generate reviewable SQL migrations, run impact analysis, validate with sandbox testing,
-  and deploy safely to production.
+description: DBWarden is a SQL-first database migration system for Python and SQLAlchemy. Generate reviewable SQL migrations, validate them before production, and operate multiple databases from one config source.
 seo:
   title: DBWarden - DBWarden Documentation
-  description: DBWarden is a SQL-first database migration system for Python and SQLAlchemy.
-    Generate reviewable SQL migrations, run impact analysis, validate with sandbox
-    testing, and deploy safely to production.
+  description: DBWarden is a SQL-first database migration system for Python and SQLAlchemy. Generate reviewable SQL migrations, validate them before production, and operate multiple databases from one config source.
   canonical: https://emiliano-gandini-outeda.github.io/DBWarden/
   robots: index,follow
   og:
     type: website
     title: DBWarden - DBWarden Documentation
-    description: DBWarden is a SQL-first database migration system for Python and
-      SQLAlchemy. Generate reviewable SQL migrations, run impact analysis, validate
-      with sandbox testing, and deploy safely to production.
+    description: DBWarden is a SQL-first database migration system for Python and SQLAlchemy. Generate reviewable SQL migrations, validate them before production, and operate multiple databases from one config source.
     url: https://emiliano-gandini-outeda.github.io/DBWarden/
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: DBWarden - DBWarden Documentation
-    description: DBWarden is a SQL-first database migration system for Python and
-      SQLAlchemy. Generate reviewable SQL migrations, run impact analysis, validate
-      with sandbox testing, and deploy safely to production.
+    description: DBWarden is a SQL-first database migration system for Python and SQLAlchemy. Generate reviewable SQL migrations, validate them before production, and operate multiple databases from one config source.
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: DBWarden - DBWarden Documentation
     url: https://emiliano-gandini-outeda.github.io/DBWarden/
-    description: DBWarden is a SQL-first database migration system for Python and
-      SQLAlchemy. Generate reviewable SQL migrations, run impact analysis, validate
-      with sandbox testing, and deploy safely to production.
+    description: DBWarden is a SQL-first database migration system for Python and SQLAlchemy. Generate reviewable SQL migrations, validate them before production, and operate multiple databases from one config source.
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
     publisher:
       '@type': Organization
@@ -41,73 +31,49 @@ seo:
 
 # DBWarden
 
-DBWarden is a SQL-first migration system for Python + SQLAlchemy projects.
+DBWarden is a SQL-first migration system for Python and SQLAlchemy projects.
 
-It is built for teams that want migration changes to stay explicit, reviewable, and safe from local development to production.
+It is built for teams that want schema changes to remain explicit, reviewable, and operationally safe, from local development to production.
 
-## What DBWarden Is
+**Project links**:
+[PyPI](https://pypi.org/project/dbwarden/) | [GitHub](https://github.com/emiliano-gandini-outeda/DBWarden) | [Documentation](https://emiliano-gandini-outeda.github.io/DBWarden/)
 
-- A migration workflow centered on SQL files you can review
-- A CLI for generating, applying, rolling back, and auditing migrations
-- A multi-database migration tool with lock and checksum safety built in
+## What DBWarden Does
 
-## What DBWarden Is Not
+- Generates migration files as plain SQL, with `--upgrade` and `--rollback` sections
+- Reads SQLAlchemy models and backend-specific metadata from `class Meta`
+- Supports PostgreSQL, MySQL, MariaDB, SQLite, and ClickHouse
+- Manages one or many databases from one typed config source
+- Adds safety tooling, schema diffing, seed tracking, status commands, and FastAPI integration
 
-- An ORM replacement
-- A hidden auto-migration engine that mutates schema silently
-- A deployment platform
+## The Core Workflow
 
-## Who Uses DBWarden
+DBWarden keeps the migration lifecycle simple:
 
-Teams that value SQL review as part of their deployment flow, projects with multiple databases needing consistent migration execution.
+1. Define your models.
+2. Generate SQL from the model diff.
+3. Review the SQL file.
+4. Apply it with the CLI.
+5. Verify the result with status and history commands.
+6. Roll it back when you need to validate recovery.
 
-## Key Features
-
-- Explicit `--upgrade` and `--rollback` SQL sections in every migration
-- Multi-database support from one config source
-- Dev mode (`--dev`) with optional SQLite translation workflow
-- Locking and checksum integrity checks
-- Status/history visibility for release and incident workflows
-- Seed data management with SQL and Python seed files
-- Prometheus metrics and structured JSON logging
-- FastAPI integration: session dependencies, health endpoints, migration/status routes, metrics endpoint
-- Distributed migration locking via Redis
-- Sandbox mode for safe migration testing
-- Dry-run mode to preview changes without applying
-- Sync and async URL split for CLI and FastAPI sessions
-- Schema snapshots for offline migration generation and intelligent column rename detection
-- [Cookbook of real-world examples](cookbook/index.md) with runnable code and tested commands
-
-## Requirements
-
-- Python 3.10+
-- SQLAlchemy models for model-driven migration generation
-- A supported database backend (PostgreSQL, MySQL, MariaDB, SQLite, ClickHouse)
-
-## Installation
+## Install
 
 ```bash
 pip install dbwarden
-dbwarden init
 ```
 
-## 60-Second Workflow
+Optional groups:
 
 ```bash
-# 1) Initialize project
-dbwarden init
-
-# 2) Generate SQL migration from models
-dbwarden make-migrations "create users table" --database primary
-
-# 3) Apply migrations
-dbwarden migrate --database primary
-
-# 4) Verify state
-dbwarden status --database primary
+pip install "dbwarden[fastapi,metrics,sandbox]"
 ```
 
-## Minimal Config Example
+## Quick Start
+
+### Step 1: Configure a database
+
+Create `dbwarden.py`:
 
 ```python
 from dbwarden import database_config
@@ -118,42 +84,107 @@ primary = database_config(
     default=True,
     database_type="postgresql",
     database_url_sync="postgresql://user:password@localhost:5432/main",
-    model_paths=["app/models"],
+    model_paths=["app.models"],
+    dev_database_type="sqlite",
+    dev_database_url="sqlite:///./development.db",
 )
 ```
 
-## Example Upgrade (Dev Loop)
+### Step 2: Define your models
 
-```bash
-# Generate and apply against dev database
-dbwarden --dev make-migrations "add indexes" --database primary
-dbwarden --dev migrate --database primary
+```python
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import DeclarativeBase
+from dbwarden import IndexSpec, TableMeta
 
-# Validate status/history
-dbwarden --dev status --database primary
-dbwarden --dev history --database primary
+
+class Base(DeclarativeBase):
+    pass
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True)
+    email = Column(String(255), unique=True, nullable=False)
+    bio = Column(Text, nullable=True)
+
+    class Meta(TableMeta):
+        comment = "Core user accounts"
+
+
+class Post(Base):
+    __tablename__ = "posts"
+
+    id = Column(Integer, primary_key=True)
+    title = Column(String(255), nullable=False)
+    body = Column(Text, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime, nullable=False)
+
+    class Meta(TableMeta):
+        indexes = [
+            IndexSpec(name="ix_posts_created_at", columns=["created_at"]),
+        ]
 ```
 
-## Why Teams Choose This Model
+### Step 3: Generate a migration
 
-- SQL is the source of truth
-- Rollback is mandatory, not optional
-- One migration flow works for one DB or many DBs
-- Operational safety is first-class (locks, checksums, auditable history)
+```bash
+dbwarden make-migrations "create core tables" --database primary
+```
 
-## Recap
+Typical output:
 
-With one `database_config(...)` definition and one migration command loop, you get:
+```text
+Created migration: migrations/primary/primary__0001_create_core_tables.sql
+```
 
-- typed config validation
-- deterministic migration plans
-- explicit SQL artifacts in version control
-- safe execution with recovery-oriented tooling
+### Step 4: Apply it
 
-## Where to Go Next
+```bash
+dbwarden migrate --database primary
+```
 
-- Start here: [Getting Started](getting-started/first-steps.md)
-- Learn the workflow: [Your First Migration](tutorial/your-first-migration.md)
-- Go deeper: [Migration Files](migration-files.md)
-- Work through examples: [Cookbook & Examples](cookbook/index.md)
-- Lookup details: [CLI Reference](cli-reference.md)
+Typical output:
+
+```text
+Applying migration: primary__0001_create_core_tables.sql
+Migration applied successfully
+```
+
+### Step 5: Verify the state
+
+```bash
+dbwarden status --database primary
+dbwarden history --database primary
+```
+
+Typical status output:
+
+```text
+Database: primary
+Applied migrations: 1
+Pending migrations: 0
+```
+
+## Why Teams Use It
+
+- SQL remains the source of truth
+- Rollback SQL is part of the workflow, not an afterthought
+- Multi-database projects stay under one migration tool
+- Safety tooling is built in, not bolted on later
+- FastAPI projects can use the same config for sessions, health checks, and migration endpoints
+
+## Requirements
+
+- Python 3.12 or higher
+- SQLAlchemy models for model-driven migration generation
+- A supported backend: PostgreSQL, MySQL, MariaDB, SQLite, or ClickHouse
+
+## Next Steps
+
+- Start with [Features](features.md)
+- Follow the guides in [Get Started](getting-started/setup.md)
+- Explore [Cookbook & Examples](cookbook/index.md)
+- Use [CLI Reference](cli-reference.md) as command lookup

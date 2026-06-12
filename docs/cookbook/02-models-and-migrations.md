@@ -288,7 +288,7 @@ This prints the rollback SQL to stdout. Useful for quickly verifying what a roll
 ## Related Documentation
 
 - [SQLAlchemy Models Reference](../models.md)
-- [Modeling Guide](../tutorial/modeling.md)
+- [Modeling Guide](../getting-started/modeling.md)
 - [Migration File Format](../migration-files.md)
 - [`make-migrations` command](../commands/make-migrations.md)
 
