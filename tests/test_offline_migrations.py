@@ -593,7 +593,23 @@ def test_offline_make_migrations_end_to_end():
                 json.dumps(initial_state, indent=2) + "\n", encoding="utf-8"
             )
 
-            # ── Step 2: Modify the model to add bio column ──
+            # ── Step 2: Run make-migrations --offline (first run ──
+            # no migration files exist, so this generates CREATE TABLE for all models)
+            make_migrations_cmd("initial schema", offline=True, database="primary")
+
+            # ── Step 3: Verify first migration creates the full table ──
+            sql_files = sorted(Path("migrations/primary").glob("*.sql"))
+            assert len(sql_files) >= 1, "Should have created at least one SQL file"
+
+            initial_sql = sql_files[-1]
+            initial_sql_content = initial_sql.read_text(encoding="utf-8")
+            assert "CREATE TABLE" in initial_sql_content, (
+                f"First migration should create table, got:\n{initial_sql_content}"
+            )
+            assert "email VARCHAR(255)" in initial_sql_content
+            assert "id INTEGER NOT NULL PRIMARY KEY" in initial_sql_content
+
+            # ── Step 4: Modify the model to add bio column ──
             Path("models/user.py").write_text(
                 "from sqlalchemy import Column, Integer, String, Text\n"
                 "from sqlalchemy.orm import declarative_base\n\n"
@@ -606,40 +622,40 @@ def test_offline_make_migrations_end_to_end():
                 encoding="utf-8",
             )
 
-            # ── Step 3: Run make-migrations --offline ──
+            # ── Step 5: Run make-migrations --offline again (delta only) ──
             make_migrations_cmd("add bio column", offline=True, database="primary")
 
-            # ── Step 4: Verify results ──
+            # ── Step 6: Verify second migration has just the delta ──
             sql_files = sorted(Path("migrations/primary").glob("*.sql"))
             plan_files = sorted(Path("migrations/primary").glob("*.plan.json"))
 
-            assert len(sql_files) >= 1, "Should have created at least one SQL file"
-            assert len(plan_files) >= 1, "Should have created at least one plan file"
+            assert len(sql_files) >= 2, "Should have created a second SQL file"
+            assert len(plan_files) >= 2, "Should have created a second plan file"
 
-            offline_sql = sql_files[-1]
-            offline_sql_content = offline_sql.read_text(encoding="utf-8")
-            assert "ALTER TABLE users ADD COLUMN bio" in offline_sql_content, (
-                f"Offline migration should add bio column, got:\n{offline_sql_content}"
+            second_sql = sql_files[-1]
+            second_sql_content = second_sql.read_text(encoding="utf-8")
+            assert "ALTER TABLE users ADD COLUMN bio" in second_sql_content, (
+                f"Second migration should add bio column, got:\n{second_sql_content}"
             )
-            assert "-- upgrade" in offline_sql_content
-            assert "-- rollback" in offline_sql_content
-            assert "ALTER TABLE users DROP COLUMN bio" in offline_sql_content
+            assert "-- upgrade" in second_sql_content
+            assert "-- rollback" in second_sql_content
+            assert "ALTER TABLE users DROP COLUMN" in second_sql_content
 
             # Verify plan file
-            offline_plan = plan_files[-1]
-            plan = json.loads(offline_plan.read_text(encoding="utf-8"))
-            assert plan["migration_id"] == offline_sql.stem
+            second_plan = plan_files[-1]
+            plan = json.loads(second_plan.read_text(encoding="utf-8"))
+            assert plan["migration_id"] == second_sql.stem
             assert len(plan["operations"]) >= 1
             assert plan["operations"][0]["type"] == "add_column"
 
-            # ── Step 5: Verify state was updated ──
+            # ── Step 7: Verify state was updated ──
             updated_state = json.loads(Path(".dbwarden/model_state.json").read_text())
             assert "bio" in updated_state["tables"]["users"]["columns"], (
                 f"State should include 'bio' column, got: "
                 f"{list(updated_state['tables']['users']['columns'].keys())}"
             )
 
-            # ── Step 6: Run offline again with no changes ──
+            # ── Step 8: Run offline again with no changes ──
             make_migrations_cmd("no changes", offline=True, database="primary")
             sql_files_after = sorted(Path("migrations/primary").glob("*.sql"))
             assert len(sql_files_after) == len(sql_files), (

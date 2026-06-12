@@ -291,6 +291,16 @@ def _run_offline_migrations(
         return
     from dbwarden import __version__ as _dw_version
 
+    # If no migration files exist yet, this is a first run.
+    # Treat prev_state as empty so ALL tables get CREATE TABLE SQL,
+    # not just the delta (which is empty because export-models already captured them).
+    try:
+        _migrations_dir = get_migrations_directory(database)
+    except Exception:
+        _migrations_dir = str(Path.cwd() / config.migrations_dir)
+    if not list(Path(_migrations_dir).glob("*.sql")):
+        prev_state["tables"] = {}
+
     current_tables = get_all_model_tables(model_paths, db_name=database)
     validate_model_tables_exist(current_tables, config.model_tables, db_name)
     current_tables = filter_model_tables_by_name(current_tables, config.model_tables)
