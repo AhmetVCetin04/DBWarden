@@ -593,7 +593,6 @@ def seed_export(
     ),
 ):
     """Export code seeds to ROC SQL files for stateless application."""
-    validate_directory()
     handle_seed_export(
         database=database,
         all_databases=all_databases,
