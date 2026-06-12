@@ -43,8 +43,8 @@ DBWarden provides built-in seed data management for populating databases with in
 
 There are two ways to define seeds, listed in order of preference:
 
-1. **Code seeds** (recommended) — define seeds inline alongside your SQLAlchemy models using the `Seed` base class or `@seed_data` decorator. No separate files, no manual versioning.
-2. **File seeds** — traditional `.sql` or `.py` files in a `seeds/` directory, useful for complex multi-statement SQL.
+1. **Code seeds** (recommended): define seeds inline alongside your SQLAlchemy models using the `Seed` base class or `@seed_data` decorator. No separate files, no manual versioning.
+2. **File seeds**: traditional `.sql` or `.py` files in a `seeds/` directory, useful for complex multi-statement SQL.
 
 Both are tracked in the `_dbwarden_seeds` table and applied via `dbwarden seed apply`.
 
@@ -76,9 +76,18 @@ class CountrySeed(Seed):
 
 Key advantages over the old decorator approach:
 
-- **Full IDE autocompletion** — `rows` uses model instances directly, so your editor knows the column names and types
-- **No `version` parameter** — versions are auto-assigned (`C0001`, `C0002`, ...) based on deterministic class ordering
-- **No manual import of `SeedRow`** — though `SeedRow` is still available if you prefer dict-like rows
+- **Full IDE autocompletion**: `rows` uses model instances directly, so your editor knows the column names and types
+- **No `version` parameter**: versions are auto-assigned (`C0001`, `C0002`, ...) based on deterministic class ordering
+- **No manual import of `SeedRow`**: though `SeedRow` is still available if you prefer dict-like rows
+
+### Seed Class Reference
+
+| Attribute | Default | Description |
+|-----------|---------|-------------|
+| `__seed_database__` | `"default"` | Routes the seed to the named database handle configured in `database_config(...)`. |
+| `__seed_description__` | `""` | Human-readable label shown in `dbwarden seed list` output. |
+| `__seed_on_conflict__` | `"ignore"` | What to do when a row with matching columns exists: `"ignore"` (skip silently), `"update"` (overwrite), or `"error"` (raise). |
+| `__seed_conflict_columns__` | `None` | List of column names used for conflict detection. Required when `__seed_on_conflict__` is `"update"`. |
 
 ### Model Instances in Rows
 
@@ -165,7 +174,7 @@ class CountrySeed:
     rows = [SeedRow(code="UY", name="Uruguay")]
 ```
 
-Note that `version` is **no longer required** — it is auto-assigned.
+Note that `version` is **no longer required**; it is auto-assigned.
 
 ### Discovery and Ordering
 

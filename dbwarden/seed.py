@@ -45,12 +45,52 @@ class SeedMeta:
 
 
 class Seed:
+    """Base class for in-code seed definitions.
+
+    Subclass this to define seed data that is applied alongside your migrations.
+
+    Attributes:
+        model: The SQLAlchemy model class to seed data into.
+        rows: List of model instances or ``SeedRow`` objects.
+        __seed_database__: Target database name (default ``"default"``).
+        __seed_description__: Human-readable label shown in seed list.
+        __seed_on_conflict__: ``"ignore"`` (default), ``"update"``, or ``"error"``.
+        __seed_conflict_columns__: Column names for conflict detection
+            when ``__seed_on_conflict__`` is ``"update"``.
+    """
+
     model: ClassVar[type]
     rows: ClassVar[list | None] = None
+
+    __seed_database__: ClassVar[str] = "default"
+    """Target database name. Routes the seed to the correct database handle."""
+
+    __seed_description__: ClassVar[str] = ""
+    """Human-readable description shown in ``dbwarden seed list`` output."""
+
+    __seed_on_conflict__: ClassVar[str] = "ignore"
+    """Conflict resolution strategy: ``"ignore"`` (skip existing), ``"update"``, or ``"error"``."""
+
+    __seed_conflict_columns__: ClassVar[list[str] | None] = None
+    """Column names for conflict detection when ``__seed_on_conflict__`` is ``"update"``."""
+
     __seed_meta__: ClassVar[SeedMeta | None] = None
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
+        source = ""
+        try:
+            source = inspect.getsource(cls)
+        except (OSError, TypeError):
+            pass
+        source_hash = hashlib.sha256(source.encode()).hexdigest()[:16] if source else ""
+        cls.__seed_meta__ = SeedMeta(
+            database=cls.__seed_database__,
+            description=cls.__seed_description__,
+            on_conflict=cls.__seed_on_conflict__,
+            conflict_columns=cls.__seed_conflict_columns__ or [],
+            source_hash=source_hash,
+        )
         _seed_registry.append(cls)
 
 
