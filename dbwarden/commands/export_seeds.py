@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session as SASession
 
 from dbwarden.config import get_database, get_multi_db_config
 from dbwarden.engine.code_seeds import discover_code_seeds
+from dbwarden.engine.model_discovery import get_all_model_tables
 from dbwarden.exceptions import SeedError
 from dbwarden.logging import get_logger
 from dbwarden.output import console
@@ -76,12 +77,16 @@ def _export_database(
 ) -> None:
     console.print(f"Exporting seeds for '{db_name}'...", style="bold cyan")
 
+    # Load model files so Seed subclasses populate _seed_registry
+    config = get_database(db_name)
+    model_paths = config.model_paths
+    if model_paths:
+        get_all_model_tables(model_paths, db_name=db_name)
+
     seeds = discover_code_seeds(db_name)
     if not seeds:
         console.print(f"  No code seeds found for '{db_name}'.", style="yellow")
         return
-
-    config = get_database(db_name)
     dialect = _resolve_dialect(config.database_type, render_dialect)
 
     ordered = _ordered_seeds(seeds)
@@ -247,7 +252,6 @@ def _export_logic_seed(
                     text(f"INSERT INTO {dep_table_name} ({cols}) VALUES ({ph})"),
                     data,
                 )
-        conn.commit()
 
     with engine.begin() as conn:
         _pre_seed(conn, all_ordered, seed_cls)
