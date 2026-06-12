@@ -56,7 +56,6 @@ dbwarden seed create "populate lookup tables" --database primary --type python
 
 - `--database`, `-d`: target database handle
 - `--type`: `sql` (default) or `python`
-- `--seed-table`: custom seed tracking table name (default: `_dbwarden_seeds`)
 - `--verbose`, `-v`
 
 ---
@@ -79,7 +78,6 @@ dbwarden seed apply --all
 - `--database`, `-d`
 - `--all`, `-a`: apply across all configured databases
 - `--version`: apply up to this seed version
-- `--seed-table`: custom seed tracking table name
 - `--dry-run`: preview without executing
 - `--verbose`, `-v`
 

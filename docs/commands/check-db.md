@@ -43,7 +43,7 @@ dbwarden check-db --database primary --out yaml
 ## Options
 
 - `--database`, `-d`
-- `--out`, `-o` (`txt`, `json`, `yaml`)
+- `--out`, `-o` (`txt`, `json`, `yaml`, `sql`)
 
 ## Notes
 

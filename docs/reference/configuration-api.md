@@ -49,6 +49,7 @@ def database_config(
     migrations_dir: str | None = None,
     migration_table: str | None = None,
     seed_table: str | None = None,
+    auto_apply_seeds: bool = False,
     model_paths: list[str] | None = None,
     model_tables: list[str] | None = None,
     dev_database_type: str | None = None,
@@ -78,6 +79,7 @@ At least one of `database_url_sync` or `database_url_async` must be provided.
 | `migrations_dir` | `str | None` | `None` | custom migration directory path (defaults to `migrations/<database_name>`) |
 | `migration_table` | `str | None` | `None` | custom migration tracking table name (defaults to `_dbwarden_migrations`) |
 | `seed_table` | `str | None` | `None` | custom seed tracking table name (defaults to `_dbwarden_seeds`) |
+| `auto_apply_seeds` | `bool` | `False` | if `True`, automatically apply pending code seeds after `migrate` |
 | `model_paths` | `list[str] | None` | `None` | list of Python import paths containing SQLAlchemy models for this database |
 | `model_tables` | `list[str] | None` | `None` | optional filter: only these table names are owned by this database |
 | `dev_database_type` | `str | None` | `None` | backend type for local development (used with `--dev`) |
@@ -290,6 +292,32 @@ primary = database_config(
 ```
 
 Use this when integrating with an existing database that already reserves the seed table name.
+
+### `auto_apply_seeds`
+
+When `True`, DBWarden automatically applies pending code seeds after each successful `migrate` run.
+
+- Defaults to `False`
+- Applies per database entry
+- Can be overridden per-run with `--apply-seeds` / `--no-apply-seeds` CLI flags on `migrate`
+
+**Example:**
+
+```python
+primary = database_config(
+    database_name="primary",
+    default=True,
+    database_type="postgresql",
+    database_url_sync="postgresql://localhost/myapp",
+    auto_apply_seeds=True,
+)
+```
+
+Use this when:
+
+- you want seeds to stay in sync with schema changes without manual `seed apply` steps
+- deploying code seeds that define reference data or lookup tables
+- running in CI/CD where every migration cycle should also re-seed
 
 ### `dev_database_type` and `dev_database_url`
 
@@ -512,6 +540,8 @@ analytics = database_config(
 | `default` |  No | `False` | Mark one database as default |
 | `migrations_dir` |  No | `migrations/<name>` | Custom migration directory |
 | `seed_table` |  No | `_dbwarden_seeds` | Custom seed tracking table |
+| `auto_apply_seeds` |  No | `False` | Auto-apply seeds after migrate |
+| `migration_table` |  No | `_dbwarden_migrations` | Custom migration tracking table |
 | `model_paths` |  Conditional | `None` | Multi-database or explicit discovery |
 | `model_tables` |  No | `None` | Filter discovered tables by name |
 | `dev_database_type` |  No | `None` | Local development |

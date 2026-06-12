@@ -176,6 +176,7 @@ Options:
 - `--with-backup`, `--backup-dir`
 - `--dry-run` (show what would be applied without executing)
 - `--sandbox` (apply in a temporary sandbox database)
+- `--apply-seeds` (apply pending seeds after migrations, overrides config)
 - `--verbose`
 
 ### `rollback`
@@ -239,9 +240,10 @@ Options: `--database`, `--all` (`-a`), `--version`, `--dry-run`, `--verbose`
 ```bash
 dbwarden seed list --database primary
 dbwarden seed list --all
+dbwarden seed list --prune
 ```
 
-Options: `--database`, `--all`, `--verbose`
+Options: `--database`, `--all`, `--prune`, `--verbose`
 
 ### `seed rollback`
 

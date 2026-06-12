@@ -274,7 +274,7 @@ CREATE DICTIONARY my_dict (... MergeTree() ...);
 
 ### Materialized views and unsupported objects
 
-Engine recreation is **blocked** for tables that are themselves materialized views (`ch_select_statement` or `ch_object_type = materialized_view`). Use `--force` to skip this check and handle the DROP/CREATE manually.
+Engine recreation is **blocked** for tables that are themselves materialized views (`ch_select_statement` or `ch_object_type = materialized_view`). Handle these manually with a DROP/CREATE migration.
 
 Projections (`ch_projections`) are automatically preserved through the table rebuild and do not block it.
 

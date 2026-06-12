@@ -52,6 +52,9 @@ dbwarden migrate --database primary --baseline --to-version 0005
 - `--baseline`
 - `--with-backup`, `-b`
 - `--backup-dir`
+- `--dry-run`: preview changes without applying
+- `--sandbox`: apply in a temporary sandbox database
+- `--apply-seeds`: apply pending seeds after migrations
 - `--verbose`, `-v`
 
 ## Notes
