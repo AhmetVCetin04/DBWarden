@@ -1,3 +1,4 @@
+import logging
 import os
 import sys
 from importlib.abc import Loader, MetaPathFinder
@@ -6,6 +7,8 @@ from pathlib import Path
 from typing import Any, Set
 
 from dbwarden.exceptions import ConfigurationError
+
+logger = logging.getLogger("dbwarden.sandbox")
 
 
 ALLOWED_IMPORTS: Set[str] = {
@@ -282,13 +285,15 @@ def load_model_module(filepath: Path, base_dir: Path) -> Any:
 
         spec = importlib.util.spec_from_file_location("models", filepath)
         if spec is None or spec.loader is None:
+            logger.warning("Could not create module spec for model: %s", filepath)
             return None
 
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
 
         return module
-    except Exception:
+    except Exception as e:
+        logger.warning("Failed to load model %s: %s", filepath, e)
         return None
 
 
