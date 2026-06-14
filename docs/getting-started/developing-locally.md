@@ -72,7 +72,7 @@ Using SQLite in dev mode is common, but not every type or default translates per
 If you want those warnings to become hard failures, use:
 
 ```bash
-dbwarden --dev --strict-translation make-migrations "validate translation" --database primary
+$ dbwarden --dev --strict-translation make-migrations "validate translation" --database primary
 ```
 
 ## Check the Planned Changes
@@ -80,7 +80,7 @@ dbwarden --dev --strict-translation make-migrations "validate translation" --dat
 Use `diff` when you want to inspect differences without writing files:
 
 ```bash
-dbwarden diff --database primary
+$ dbwarden diff --database primary
 ```
 
 Use `check` when you want a safety classification:
@@ -92,17 +92,6 @@ WARN      shrink varchar users.email
 CRITICAL  drop table audit_log
 ```
 
-## Reverse-Engineer Models
-
-If you are adopting DBWarden on an existing project, or documenting a live schema, use `generate-models`.
-
-```text
-$ dbwarden generate-models --database primary --tables users,posts
-Generated models/users.py
-Generated models/posts.py
-```
-
-The generated code includes `class Meta` blocks with backend-specific metadata when available.
 
 ## Offline Migrations
 
@@ -115,8 +104,8 @@ Offline migrations let you generate SQL without connecting to a live database. T
 Commands:
 
 ```bash
-dbwarden export-models --database primary
-dbwarden make-migrations "offline schema change" --offline --database primary
+$ dbwarden export-models --database primary
+$ dbwarden make-migrations "offline schema change" --offline --database primary
 ```
 
 This is useful for CI, restricted environments, and workflows where the migration plan should not depend on a live database connection.
@@ -128,23 +117,13 @@ For a full walkthrough, see [Cookbook: Offline & CI](../cookbook/04-offline-ci.m
 A practical local loop looks like this:
 
 ```bash
-dbwarden --dev diff --database primary
-dbwarden --dev check --database primary
-dbwarden --dev make-migrations "local change" --database primary
-dbwarden --dev migrate --database primary
-dbwarden --dev status --database primary
+$ dbwarden --dev diff --database primary
+$ dbwarden --dev check --database primary
+$ dbwarden --dev make-migrations "local change" --database primary
+$ dbwarden --dev migrate --database primary
+$ dbwarden --dev status --database primary
 ```
 
 This keeps feedback fast while still using the same toolchain you use in production.
-
-## Recap
-
-You have seen how to:
-
-- use `--dev` safely
-- rely on SQLite translation for local workflows
-- inspect changes with `diff` and `check`
-- reverse-engineer models from a live schema
-- generate offline migrations
 
 Next, continue with [Workflows](workflows.md).

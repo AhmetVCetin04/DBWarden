@@ -44,21 +44,21 @@ This guide shows the initial project setup for DBWarden. By the end, you will ha
 Install the base package:
 
 ```bash
-pip install dbwarden
+uv add dbwarden
 ```
 
 Optional dependency groups:
 
 | Group | Command | Use case |
 |---|---|---|
-| `fastapi` | `pip install "dbwarden[fastapi]"` | FastAPI session dependencies and runtime integration |
-| `metrics` | `pip install "dbwarden[metrics]"` | Prometheus metrics |
-| `sandbox` | `pip install "dbwarden[sandbox]"` | Sandbox migration testing |
+| `fastapi` | `uv add "dbwarden[fastapi]"` | FastAPI session dependencies and runtime integration |
+| `metrics` | `uv add "dbwarden[metrics]"` | Prometheus metrics |
+| `sandbox` | `uv add "dbwarden[sandbox]"` | Sandbox migration testing |
 
 You can combine them:
 
 ```bash
-pip install "dbwarden[fastapi,metrics,sandbox]"
+uv add "dbwarden[fastapi,metrics,sandbox]"
 ```
 
 ## Initialize the Project
@@ -115,7 +115,7 @@ database_name="primary"
 This is the stable name you will use in CLI commands such as:
 
 ```bash
-dbwarden status --database primary
+$ dbwarden status --database primary
 ```
 
 ### Step 3: Mark the default database
@@ -193,6 +193,14 @@ analytics = database_config(
     model_paths=["app.models"],
     model_tables=["events", "page_views"],
 )
+
+logs = database_config(
+    database_name="logs",
+    database_type="mysql",
+    database_url_sync="mysql+pymysql://user:password@localhost:3306/logs",
+    model_paths=["app.models"],
+    model_tables=["audit_log", "error_log"],
+)
 ```
 
 If `model_tables` is not set, all discovered tables in `model_paths` belong to that database.
@@ -237,14 +245,5 @@ If you configure more than one database, only one can be the default.
 ### `model_paths is required when more than one database is configured`
 
 In multi-database setups, each database must declare the models that belong to it.
-
-## Recap
-
-You have:
-
-- installed DBWarden
-- initialized the project
-- defined one typed database entry
-- verified the config with `settings show`
 
 Next, continue with [Modeling](modeling.md).
