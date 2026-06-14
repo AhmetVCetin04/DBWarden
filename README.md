@@ -74,13 +74,22 @@ DBWarden is designed as a drop-in replacement for migration workflows built arou
 ## Installation
 
 ```bash
-pip install dbwarden
-pip install "dbwarden[fastapi]"   # FastAPI integration
-pip install "dbwarden[metrics]"   # Prometheus metrics
-pip install "dbwarden[sandbox]"   # Docker-backed test databases
+uv add dbwarden
+uv add "dbwarden[fastapi]"   # FastAPI integration
+uv add "dbwarden[metrics]"   # Prometheus metrics
+uv add "dbwarden[sandbox]"   # Docker-backed test databases
 ```
 
 Requirements: Python 3.12.7+, SQLAlchemy 2.0+.
+
+Optional dependency groups:
+
+| Group         | Default | Provides                    |
+|---------------|---------|-----------------------------|
+| `[postgres]`  | Yes     | asyncpg, psycopg            |
+| `[mysql]`     |         | asyncmy, pymysql            |
+| `[clickhouse]`|         | clickhouse-connect          |
+| `[mariadb]`   |         | mariadb (asyncmy compatible)|
 
 ## Quickstart
 
@@ -103,7 +112,7 @@ primary = database_config(
 ```python
 from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime
 from sqlalchemy.orm import DeclarativeBase
-from dbwarden import TableMeta, IndexSpec
+from dbwarden.databases import TableMeta, IndexSpec
 
 class Base(DeclarativeBase):
     pass
@@ -137,7 +146,7 @@ class Post(Base):
 ### 3. Generate a migration
 
 ```bash
-dbwarden make-migrations
+$ dbwarden make-migrations
 ```
 
 Every migration includes both upgrade and rollback SQL by default.
@@ -170,13 +179,13 @@ DROP TABLE users;
 ### 4. Apply
 
 ```bash
-dbwarden migrate
+$ dbwarden migrate
 ```
 
 ### 5. Check status
 
 ```bash
-dbwarden status
+$ dbwarden status
 ```
 
 ## Typical workflow
@@ -228,7 +237,7 @@ Typical adoption path in an existing project:
 Before applying schema changes, DBWarden can scan your codebase to identify what will be affected. It uses AST analysis with a grep fallback, so results reflect actual code structure rather than text matches.
 
 ```bash
-dbwarden check-impact 0042 --database primary
+$ dbwarden check-impact 0042 --database primary
 ```
 
 Output:
@@ -249,27 +258,27 @@ Run this before any destructive deploy to surface breaking changes before they r
 Export model state once, then generate migrations on any machine without a database connection. Useful for CI pipelines and local development without a running database.
 
 ```bash
-dbwarden export-models --database primary
+$ dbwarden export-models --database primary
 git add .dbwarden/model_state.json
 ```
 
 Then on any machine, with no database required:
 
 ```bash
-dbwarden make-migrations "add bio column" --offline
+$ dbwarden make-migrations "add bio column" --offline
 ```
 
 The model state file is updated in place after each migration.
 
 ---
 
-## PostgreSQL (primary backend)
+## PostgreSQL: primary backend
 
 First-class support with full round-trip schema fidelity. Reverse-engineer a live database, feed the output back into `make-migrations`, and get zero diff.
 
 ```bash
-dbwarden generate-models -d primary --tables users
-dbwarden make-migrations
+$ dbwarden generate-models -d primary --tables users
+$ dbwarden make-migrations
 # No changes detected
 ```
 
@@ -283,13 +292,13 @@ Supported features:
 - Enum type creation and value addition
 - Full type normalization: SERIAL, TIMESTAMPTZ, NUMERIC, VARCHAR, JSONB, UUID, ARRAY, TSTZRANGE
 
-## ClickHouse (analytics backend)
+## ClickHouse: analytics backend
 
 First-class support for ClickHouse analytics workloads, including schema generation and round-trip validation for supported features.
 
 ```bash
-dbwarden generate-models -d analytics
-dbwarden make-migrations
+$ dbwarden generate-models -d analytics
+$ dbwarden make-migrations
 # No changes detected
 ```
 
@@ -351,7 +360,7 @@ app.include_router(DBWardenRouter(), prefix="/db")
 DBWarden can generate request and response schemas directly from model annotations, eliminating duplicated definitions between your ORM layer and your API layer. This keeps API schemas and ORM models in sync without duplication.
 
 ```python
-from dbwarden.schema import auto_schema
+from dbwarden.databases import auto_schema
 
 @auto_schema
 class User(Base):
@@ -390,13 +399,13 @@ Optional but powerful: derive your entire API schema layer directly from your SQ
 
 ## Supported databases
 
-| Database   | Role                          | Notes                            |
-|------------|-------------------------------|----------------------------------|
-| PostgreSQL | Primary transactional backend | Full round-trip fidelity         |
-| ClickHouse | Analytics backend             | Full round-trip fidelity         |
-| MySQL      | General support               | DDL parity focus                 |
-| MariaDB    | General support               | MySQL-compatible mode            |
-| SQLite     | Dev and testing               | Used in dev mode SQL translation |
+| Database   | Role                          | Round-trip                       | Notes                            |
+|------------|-------------------------------|----------------------------------|----------------------------------|
+| PostgreSQL | Primary transactional backend | Yes                              | Full round-trip fidelity         |
+| MySQL      | General support               | Yes                              | DDL parity focus                 |
+| MariaDB    | General support               | No                               | MySQL-compatible mode            |
+| ClickHouse | Analytics backend             | Yes                              | Full round-trip for supported ops |
+| SQLite     | Dev and testing               | Dev mode only                    | Used in dev mode SQL translation |
 
 ---
 
