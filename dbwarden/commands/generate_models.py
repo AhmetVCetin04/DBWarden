@@ -420,13 +420,14 @@ def _generate_table_code(
     object_type: str = "table",
     pg_meta: dict | None = None,
     my_meta: dict | None = None,
+    base_class_name: str = "Base",
 ) -> str:
     class_name = "".join(part.capitalize() for part in re.split(r"[_\s]", table_name) if part)
     if not class_name:
         class_name = table_name.capitalize()
 
     lines: list[str] = []
-    lines.append(f"class {class_name}(Base):")
+    lines.append(f"class {class_name}({base_class_name}):")
     lines.append(f"    __tablename__ = {table_name!r}")
     for col in columns:
         col_line = _format_column(col)
@@ -601,7 +602,11 @@ def _format_column(col: dict) -> str:
     return ",\n        ".join(col_args)
 
 
-def _write_models(output_dir: str, tables: list[dict], single_file: bool) -> None:
+def _write_models(
+    output_dir: str, tables: list[dict], single_file: bool,
+    base_import_path: str | None = None,
+    base_class_name: str = "Base",
+) -> None:
     out_path = Path(output_dir)
     out_path.mkdir(parents=True, exist_ok=True)
 
@@ -631,6 +636,7 @@ def _write_models(output_dir: str, tables: list[dict], single_file: bool) -> Non
                     table.get("object_type", "table"),
                     table.get("pg_meta"),
                     table.get("my_meta"),
+                    base_class_name=base_class_name,
                 )
             )
 
@@ -661,10 +667,13 @@ def _write_models(output_dir: str, tables: list[dict], single_file: bool) -> Non
         )
         if pg_dialect_imports:
             content += "from sqlalchemy.dialects.postgresql import " + ", ".join(sorted(pg_dialect_imports)) + "\n"
-        content += (
-            "from sqlalchemy.ext.declarative import declarative_base\n\n\n"
-            "Base = declarative_base()\n\n\n"
-        )
+        if base_import_path:
+            content += f"from {base_import_path} import {base_class_name}\n\n\n"
+        else:
+            content += (
+                "from sqlalchemy.ext.declarative import declarative_base\n\n\n"
+                "Base = declarative_base()\n\n\n"
+            )
         if pg_meta_imports or needs_pg_spec:
             imports = ", ".join(sorted(pg_meta_imports))
             if needs_pg_spec:
@@ -697,8 +706,11 @@ def _write_models(output_dir: str, tables: list[dict], single_file: bool) -> Non
         content_lines.append("from sqlalchemy import " + ", ".join(sorted(imports)) + "\n")
         if pg_dialect_imports:
             content_lines.append("from sqlalchemy.dialects.postgresql import " + ", ".join(sorted(pg_dialect_imports)) + "\n")
-        content_lines.append("from sqlalchemy.ext.declarative import declarative_base\n\n\n")
-        content_lines.append("Base = declarative_base()\n\n\n")
+        if base_import_path:
+            content_lines.append(f"from {base_import_path} import {base_class_name}\n\n\n")
+        else:
+            content_lines.append("from sqlalchemy.ext.declarative import declarative_base\n\n\n")
+            content_lines.append("Base = declarative_base()\n\n\n")
         needs_pg_base: set[str] = set()
         needs_my_base: set[str] = set()
         needs_pg_spec = False
@@ -739,6 +751,7 @@ def _write_models(output_dir: str, tables: list[dict], single_file: bool) -> Non
                 table.get("object_type", "table"),
                 table.get("pg_meta"),
                 table.get("my_meta"),
+                base_class_name=base_class_name,
             )
         )
         safe_name = table["name"].lower().replace("-", "_")
@@ -1072,6 +1085,20 @@ def _extract_mysql_meta(connection, table_name: str) -> tuple[dict[str, Any], di
     return table_meta, column_meta
 
 
+def _resolve_base(base: str | None) -> tuple[str | None, str]:
+    """Parse --base value into (import_path, class_name).
+
+    Accepts 'module.path:ClassName' or 'module.path' (defaults to 'Base').
+    Returns (None, 'Base') when no custom base is given.
+    """
+    if base is None:
+        return None, "Base"
+    if ":" in base:
+        mod_path, class_name = base.rsplit(":", 1)
+        return mod_path, class_name
+    return base, "Base"
+
+
 def generate_models_cmd(
     output: str = "models",
     tables: str | None = None,
@@ -1080,6 +1107,7 @@ def generate_models_cmd(
     relationships: bool = False,
     dialect: str | None = None,
     single_file: bool = False,
+    base: str | None = None,
     database: str | None = None,
 ) -> None:
     config = get_database(database)
@@ -1275,7 +1303,13 @@ def generate_models_cmd(
             })
 
     output_dir = Path(output)
-    _write_models(str(output_dir), tables_data, single_file=single_file)
+    base_import_path, base_class_name = _resolve_base(base)
+    _write_models(
+        str(output_dir), tables_data,
+        single_file=single_file,
+        base_import_path=base_import_path,
+        base_class_name=base_class_name,
+    )
     console.print(
         f"Generated {len(tables_data)} model(s) in '{output_dir}/'",
         style="green",

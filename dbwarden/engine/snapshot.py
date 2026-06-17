@@ -255,12 +255,32 @@ def _build_alter_default_sql(
     backend: str,
 ) -> tuple[str, str]:
     if default is not None:
-        upgrade = f"ALTER TABLE {table} ALTER COLUMN {column} SET DEFAULT {default}"
+        safe_default = _quote_default_for_sql(str(default))
+        upgrade = f"ALTER TABLE {table} ALTER COLUMN {column} SET DEFAULT {safe_default}"
         rollback = f"ALTER TABLE {table} ALTER COLUMN {column} DROP DEFAULT"
     else:
         upgrade = f"ALTER TABLE {table} ALTER COLUMN {column} DROP DEFAULT"
         rollback = f"ALTER TABLE {table} ALTER COLUMN {column} SET DEFAULT <original_default>"
     return upgrade, rollback
+
+
+def _quote_default_for_sql(default: str) -> str:
+    """Quote a default value for safe embedding in ALTER TABLE SQL.
+
+    Numeric literals, SQL keywords, and function calls are left unquoted.
+    String literals are wrapped in single quotes with proper escaping.
+    """
+    stripped = default.strip()
+    if not stripped:
+        return "NULL"
+    if re.match(r"^-?\d+(\.\d+)?$", stripped):
+        return stripped
+    if re.match(r"^[A-Z_][A-Z0-9_]*$", stripped):
+        return stripped
+    if re.match(r"^\w+\(.*\)$", stripped):
+        return stripped
+    escaped = stripped.replace("'", "''")
+    return f"'{escaped}'"
 
 
 def _build_pg_meta_sql(
@@ -1842,6 +1862,8 @@ def _normalize_default(d: Any) -> str | None:
     s = s.replace("\\'", "'").replace('\\"', '"')
     if s.upper() in ("TRUE", "FALSE"):
         s = s.upper()
+    if s.upper() in ("NOW()", "CURRENT_TIMESTAMP()", "CURRENT_TIMESTAMP"):
+        s = "CURRENT_TIMESTAMP"
     return s
 
 
@@ -1849,8 +1871,7 @@ def _normalize_mysql_default(d: Any) -> str | None:
     s = _normalize_default(d)
     if s is None:
         return None
-    upper = s.upper()
-    if upper.startswith("CURRENT_TIMESTAMP ON UPDATE "):
+    if s.upper().startswith("CURRENT_TIMESTAMP ON UPDATE "):
         return "CURRENT_TIMESTAMP"
     return s
 
