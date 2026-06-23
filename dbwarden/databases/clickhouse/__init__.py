@@ -4,6 +4,9 @@ from dataclasses import dataclass
 from typing import Any
 
 from dbwarden.databases.clickhouse.field import ChFieldSpec, field
+
+import sys as _sys
+ch = _sys.modules[__name__]
 from dbwarden.databases.clickhouse.engine import (
     aggregating_merge_tree,
     merge_tree,
@@ -87,6 +90,7 @@ __all__ = [
     "ChTableSpec",
     "ProjectionSpec",
     "aggregating_merge_tree",
+    "ch",
     "dictionary",
     "field",
     "materialized_view",

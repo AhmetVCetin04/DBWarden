@@ -18,6 +18,7 @@ class TableMeta(metaclass=_MetaValidator):
     indexes: list[Any] = []
     checks: list[Any] = []
     uniques: list[Any] = []
+    primary_key: list[str] = []
 
 
 class PGTableMeta(TableMeta):
@@ -121,6 +122,9 @@ class MyTableMeta(TableMeta):
     my_collate: str | None = None
     my_row_format: str | None = None
     my_auto_increment: int | None = None
+    my_indexes: list[Any] = []
+    my_checks: list[dict[str, Any]] = []
+    my_uniques: list[dict[str, Any]] = []
 
 
 class MyColumnMeta(MyFieldMeta):

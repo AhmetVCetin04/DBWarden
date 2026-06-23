@@ -1,8 +1,8 @@
-from dbwarden.databases import clickhouse as ch
-from dbwarden.databases import pgsql as pg
-from dbwarden.databases import mysql as my
-from dbwarden.databases import mariadb as mdb
-from dbwarden.databases import sqlite as sq
+from dbwarden.databases.clickhouse import ch
+from dbwarden.databases.pgsql import pg
+from dbwarden.databases.mysql import my
+from dbwarden.databases.mariadb import mdb
+from dbwarden.databases.sqlite import sq
 
 from dbwarden.databases.clickhouse import (
     ChFieldSpec,
