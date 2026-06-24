@@ -27,8 +27,8 @@ from dbwarden.engine.sqlite_translation import (
 from dbwarden.exceptions import DBWardenConfigError
 from dbwarden.logging import get_logger
 from dbwarden.models import SchemaDifference
+from dbwarden.databases.clickhouse.projection import ProjectionSpec
 from dbwarden.schema import (
-    ProjectionSpec,
     apply_meta,
     read_meta,
 )
@@ -438,7 +438,7 @@ def _ch_options_from_meta(model_class: type) -> dict:
 
 
 def _serialize_ch_engine(engine: Any) -> str | tuple | None:
-    from dbwarden.schema.engine import ChEngineSpec
+    from dbwarden.databases.clickhouse.engine import ChEngineSpec
     if isinstance(engine, ChEngineSpec):
         args = [engine.name]
         if engine.zookeeper_path is not None:

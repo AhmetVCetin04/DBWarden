@@ -1107,7 +1107,7 @@ def extract_full_schema_snapshot(
 
 def _extract_clickhouse_schema_snapshot(connection: Any, db_name: str) -> dict[str, Any]:
     from sqlalchemy import text
-    from dbwarden.schema.engine import ChEngineSpec
+    from dbwarden.databases.clickhouse.engine import ChEngineSpec
 
     tables: dict[str, Any] = {}
     enums: dict[str, Any] = {}

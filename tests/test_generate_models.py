@@ -462,7 +462,7 @@ class TestClickHouseGenerateModels:
 
     def test_render_ch_meta_with_engine_spec(self):
         from dbwarden.commands.generate_models import _render_ch_meta
-        from dbwarden.schema.engine import ChEngineSpec
+        from dbwarden.databases.clickhouse.engine import ChEngineSpec
         engine = ChEngineSpec(name="ReplicatedMergeTree", args=("/zk/path", "{replica}"))
         meta_lines = _render_ch_meta(
             columns=[],
@@ -564,7 +564,7 @@ class TestClickHouseGenerateModels:
     def test_write_models_clickhouse_ch_engine_spec_import(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             from dbwarden.commands.generate_models import _write_models
-            from dbwarden.schema.engine import ChEngineSpec
+            from dbwarden.databases.clickhouse.engine import ChEngineSpec
 
             tables = [
                 {

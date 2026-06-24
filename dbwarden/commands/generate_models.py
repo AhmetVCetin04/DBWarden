@@ -1534,7 +1534,7 @@ def _extract_ch_meta(connection, table_name: str) -> dict:
         _parse_zookeeper_path,
         _parse_replica_name,
     )
-    from dbwarden.schema.engine import ChEngineSpec
+    from dbwarden.databases.clickhouse.engine import ChEngineSpec
 
     options: dict = {}
     engine = getattr(row, "engine", "") or ""

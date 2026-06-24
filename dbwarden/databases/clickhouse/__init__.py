@@ -18,8 +18,8 @@ from dbwarden.databases.clickhouse.index import skip_index
 from dbwarden.databases.clickhouse.projection import projection
 from dbwarden.databases.clickhouse.dictionary import dictionary
 from dbwarden.databases.clickhouse.materialized_view import materialized_view
-from dbwarden.schema.engine import ChEngineSpec
-from dbwarden.schema.projection import ProjectionSpec
+from dbwarden.databases.clickhouse.engine import ChEngineSpec
+from dbwarden.databases.clickhouse.projection import ProjectionSpec
 from dbwarden.schema.table_meta import CHColumnMeta, CHTableMeta
 
 
