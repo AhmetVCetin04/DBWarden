@@ -195,7 +195,7 @@ class Meta(PGTableMeta):
 | Field | Type | Default | SQL |
 |-------|------|---------|-----|
 | `name` | `str` | (auto-generated) | Index name |
-| `columns` | `list[str]` | — | Indexed columns |
+| `columns` | `list[str]` | _required_ | Indexed columns |
 | `unique` | `bool` | `False` | `CREATE UNIQUE INDEX` |
 | `using` | `str \| None` | `None` | `USING btree` (default), `gin`, `gist`, `hash`, `brin` |
 | `where` | `str \| None` | `None` | `WHERE predicate` |
