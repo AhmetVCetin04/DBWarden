@@ -177,8 +177,10 @@ Advanced = [
   public_base_url = "https://dbwarden.emiliano-go.com/",
   site_name = "DBWarden Documentation",
   title_template = "{title} - DBWarden",
+  default_og_image = "https://dbwarden.emiliano-go.com/assets/images/og-image.png",
   publisher_name = "Emiliano Gandini Outeda",
   locale = "en_US",
+  twitter_site = "@emiliano_gando",
   auto_generate_schema = true,
 }
 
