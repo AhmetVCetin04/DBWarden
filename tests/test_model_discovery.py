@@ -1040,13 +1040,11 @@ class TestChTypeMapperWithInfo:
         result = _map_sa_type_to_clickhouse(col)
         # LowCardinality wraps first, then Nullable wraps outside
         assert result == "Nullable(LowCardinality(String))"
-
-
 class TestPGViewMetaExtraction:
     def test_extract_table_from_model_with_pg_view_meta(self, monkeypatch):
         from sqlalchemy import Column, Integer, MetaData, String, Table
         from dbwarden.databases.pgsql import PgViewSpec
-        from dbwarden.schema import DBWardenMeta
+        from dbwarden.schema._base import DBWardenMeta
 
         monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
 
@@ -1076,7 +1074,7 @@ class TestPGViewMetaExtraction:
     def test_extract_table_from_model_with_pg_matview_meta(self, monkeypatch):
         from sqlalchemy import Column, Integer, MetaData, String, Table
         from dbwarden.databases.pgsql import PgViewSpec
-        from dbwarden.schema import DBWardenMeta
+        from dbwarden.schema._base import DBWardenMeta
 
         monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
 
@@ -1106,7 +1104,7 @@ class TestPGViewMetaExtraction:
     def test_extract_table_from_model_view_rejects_table_features(self, monkeypatch):
         from sqlalchemy import Column, Integer, MetaData, String, Table
         from dbwarden.databases.pgsql import PgViewSpec, PgIndexSpec
-        from dbwarden.schema import DBWardenMeta
+        from dbwarden.schema._base import DBWardenMeta
 
         monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
 
@@ -1282,7 +1280,7 @@ class TestPGSchemaExtraction:
     def test_extract_table_from_model_with_pg_schema_from_pg_view_meta(self, monkeypatch):
         from sqlalchemy import Column, Integer, MetaData, String, Table
         from dbwarden.databases.pgsql import PgViewSpec
-        from dbwarden.schema import DBWardenMeta
+        from dbwarden.schema._base import DBWardenMeta
 
         monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
 

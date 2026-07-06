@@ -7,21 +7,15 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 import dbwarden.engine.model_discovery as model_discovery
 from dbwarden.engine.model_discovery import extract_table_from_model
 from dbwarden.exceptions import DBWardenConfigError
-from dbwarden.schema import (
-    CHColumnMeta,
-    CHTableMeta,
-    CheckSpec,
-    PGColumnMeta,
-    PGTableMeta,
-    PGViewMeta,
-    TableMeta,
-    UniqueSpec,
-    apply_meta,
-    read_meta,
-)
+from dbwarden.databases.clickhouse import CHColumnMeta, CHTableMeta
 from dbwarden.databases import check, ch, index, pg, unique
 from dbwarden.databases.clickhouse.engine import ChEngineSpec
 from dbwarden.databases.clickhouse.projection import ProjectionSpec
+from dbwarden.databases.pgsql import PGColumnMeta, PGTableMeta, PGViewMeta
+from dbwarden.schema._base import read_meta
+from dbwarden.schema._meta_reader import apply_meta
+from dbwarden.schema.constraint import CheckSpec, UniqueSpec
+from dbwarden.schema.table_meta import TableMeta
 
 
 class Base(DeclarativeBase):
@@ -179,7 +173,7 @@ class TestMetaReader:
 
 class TestIndexSpec:
     def test_index_spec_fields(self):
-        from dbwarden.schema import IndexSpec
+        from dbwarden.schema.index import IndexSpec
 
         spec = IndexSpec(columns=["a", "b"], name="ix_test", unique=True)
         assert spec.name == "ix_test"

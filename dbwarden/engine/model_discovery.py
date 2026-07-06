@@ -29,11 +29,7 @@ from dbwarden.exceptions import DBWardenConfigError
 from dbwarden.logging import get_logger
 from dbwarden.models import SchemaDifference
 from dbwarden.databases.clickhouse.projection import ProjectionSpec
-from dbwarden.schema import (
-    apply_meta,
-    read_meta,
-)
-from dbwarden.schema._base import attach_meta
+from dbwarden.schema._base import attach_meta, read_meta
 from dbwarden.schema._meta_reader import (
     _build_dbwarden_meta,
     _collect_meta_chain,
@@ -41,6 +37,7 @@ from dbwarden.schema._meta_reader import (
     _merge_meta_class,
     _type_check_field_attrs,
     _write_column_info,
+    apply_meta,
 )
 
 Base = declarative_base()
