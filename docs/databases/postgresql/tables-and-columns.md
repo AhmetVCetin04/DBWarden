@@ -1,6 +1,6 @@
 # Tables & Columns
 
-**Handlers**: `TableHandler`, `ColumnHandler` (DIFF phase)
+**Handlers**: `TableHandler`, `RenameTableHandler`, `ColumnHandler`, `PgTableHandler`, `StorageParamsHandler` (DIFF phase)
 
 ## Table Lifecycle
 
@@ -8,6 +8,7 @@
 |-----------|-----|
 | Create table | `CREATE TABLE name (...)` |
 | Drop table | `DROP TABLE IF EXISTS name CASCADE;` |
+| Rename table | `ALTER TABLE old_name RENAME TO new_name;` |
 | Alter table comment | `COMMENT ON TABLE name IS 'comment';` |
 
 ## Column Lifecycle
@@ -34,6 +35,24 @@
 | Inheritance | `pg_inherits` | `ALTER TABLE t INHERIT parent;` |
 | Storage params | (via handler) | `ALTER TABLE t SET (param = value);` |
 | ON COMMIT | `pg_on_commit` | `ON COMMIT DELETE ROWS` / `DROP` / `PRESERVE ROWS` |
+
+### Storage Params
+
+`pg_storage_params` stores raw PostgreSQL table storage options. `pg_fillfactor` is kept as a shorthand and is folded into `pg_storage_params["fillfactor"]` during discovery.
+
+```python
+class Meta(PGTableMeta):
+    pg_storage_params = {
+        "fillfactor": 80,
+        "autovacuum_enabled": "false",
+    }
+```
+
+Generated DDL:
+
+```sql
+ALTER TABLE users SET (fillfactor = 80, autovacuum_enabled = false);
+```
 
 ## ALTER TABLE Operations
 
@@ -130,7 +149,23 @@ CREATE TABLE users_archive (LIKE users INCLUDING ALL);
 ```
 
 `INCLUDING ALL` copies defaults, constraints, indexes, and storage. This is a DDL operation (no data copied).
+### Storage Params
 
+`pg_storage_params` stores raw PostgreSQL table storage options. `pg_fillfactor` is kept as a shorthand and is folded into `pg_storage_params["fillfactor"]` during discovery.
+
+```python
+class Meta(PGTableMeta):
+    pg_storage_params = {
+        "fillfactor": 80,
+        "autovacuum_enabled": "false",
+    }
+```
+
+Generated DDL:
+
+```sql
+ALTER TABLE users SET (fillfactor = 80, autovacuum_enabled = false);
+```
 ## Snapshot Format
 
 ### Column Extras

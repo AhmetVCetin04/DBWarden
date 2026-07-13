@@ -164,9 +164,13 @@ class User(Base):
     class Meta(PGTableMeta):
         pg_fillfactor = 80
         pg_tablespace = "fastspace"
+        pg_storage_params = {
+            "fillfactor": 80,
+            "autovacuum_enabled": "false",
+        }
 ```
 
-`PGTableMeta` inherits all common `TableMeta` attributes (`comment`, `indexes`, `checks`, `uniques`) and adds PostgreSQL-specific ones (`pg_schema`, `pg_fillfactor`, `pg_tablespace`, `pg_unlogged`, `pg_partition`, `pg_inherits`, `pg_excludes`, `pg_indexes`, `pg_checks`, `pg_uniques`).
+`PGTableMeta` inherits all common `TableMeta` attributes (`comment`, `indexes`, `checks`, `uniques`) and adds PostgreSQL-specific ones (`pg_schema`, `pg_fillfactor`, `pg_tablespace`, `pg_storage_params`, `pg_unlogged`, `pg_partition`, `pg_inherits`, `pg_excludes`, `pg_indexes`, `pg_checks`, `pg_uniques`).
 
 For PostgreSQL-specific indexes, use `PgIndexSpec` in `pg_indexes`:
 

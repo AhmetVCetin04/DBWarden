@@ -71,6 +71,7 @@ Support for:
 - `NULLS NOT DISTINCT` (PG 15+)
 
 A unique constraint with `NULLS NOT DISTINCT` treats NULLs as equal, so only one row can contain NULL.
+If only the constraint name changes, DBWarden emits `ALTER TABLE ... RENAME CONSTRAINT ...` instead of dropping and recreating the unique constraint.
 
 ## Primary Key Constraints
 

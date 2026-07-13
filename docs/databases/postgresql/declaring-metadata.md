@@ -22,6 +22,10 @@ class User(Base):
     class Meta(PGTableMeta):
         pg_fillfactor = 80
         pg_tablespace = "fastspace"
+        pg_storage_params = {
+            "fillfactor": 80,
+            "autovacuum_enabled": "false",
+        }
         pg_inherits = "base_entity"
         pg_excludes = [
             {"name": "excl_room_booking", "expression": "USING gist (room_id WITH =, during WITH &&)"},
@@ -43,6 +47,7 @@ PostgreSQL-specific `PGTableMeta` attributes:
 |-----------|------|-----|
 | `pg_fillfactor` | `int` | `ALTER TABLE t SET (fillfactor = N)` |
 | `pg_tablespace` | `str` | `ALTER TABLE t SET TABLESPACE name` |
+| `pg_storage_params` | `dict[str, Any]` | `ALTER TABLE t SET (param = value)` |
 | `pg_unlogged` | `bool` | `CREATE UNLOGGED TABLE ...` / `ALTER TABLE t SET UNLOGGED` |
 | `pg_partition` | `dict` | `PARTITION BY RANGE / LIST / HASH (columns)` |
 | `pg_inherits` | `str \| list[str]` | `ALTER TABLE t INHERIT parent` |

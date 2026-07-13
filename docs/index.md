@@ -44,6 +44,12 @@ DBWarden is a database migration and schema management tool for SQLAlchemy. You 
 There are no migration scripts to write or maintain. There is no migration runtime. Your models are the contract. The database is kept in sync with them.
 
 ## At a glance
+- Generates migration files as plain SQL, with `-- upgrade` and `-- rollback` sections
+- Reads SQLAlchemy models and backend-specific metadata from `class Meta`
+- Supports PostgreSQL, MySQL, MariaDB, SQLite, and ClickHouse
+- Uses a registry driven PostgreSQL pipeline for diffs and SQL emission
+- Manages one or many databases from one typed config source
+- Adds safety tooling, schema diffing, seed tracking, status commands, and FastAPI integration
 
 - Migrations generated from your models, not written by hand
 - Plain SQL output: reviewable, committable, executable anywhere
