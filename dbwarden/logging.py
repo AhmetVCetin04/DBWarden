@@ -325,6 +325,10 @@ class DBWardenLogger:
         handler.setFormatter(formatter)
         self.logger.addHandler(handler)
 
+    def _apply_logging_defaults(self, kwargs: dict[str, Any]) -> dict[str, Any]:
+        kwargs.setdefault("stacklevel", 2)
+        return kwargs
+
     def set_debug_enabled(self, debug_enabled: bool) -> None:
         self.debug_enabled = debug_enabled
         self.logger.setLevel(logging.DEBUG if debug_enabled else logging.INFO)
@@ -341,27 +345,33 @@ class DBWardenLogger:
 
     def debug(self, msg: str, *args, **kwargs) -> None:
         """Log a debug message."""
-        self.logger.debug(msg, *args, **kwargs)
+        logging_kwargs = self._apply_logging_defaults(kwargs)
+        self.logger.debug(msg, *args, **logging_kwargs)
 
     def info(self, msg: str, *args, **kwargs) -> None:
         """Log an info message."""
-        self.logger.info(msg, *args, **kwargs)
+        logging_kwargs = self._apply_logging_defaults(kwargs)
+        self.logger.info(msg, *args, **logging_kwargs)
 
     def warning(self, msg: str, *args, **kwargs) -> None:
         """Log a warning message."""
-        self.logger.warning(msg, *args, **kwargs)
+        logging_kwargs = self._apply_logging_defaults(kwargs)
+        self.logger.warning(msg, *args, **logging_kwargs)
 
     def error(self, msg: str, *args, **kwargs) -> None:
         """Log an error message."""
-        self.logger.error(msg, *args, **kwargs)
+        logging_kwargs = self._apply_logging_defaults(kwargs)
+        self.logger.error(msg, *args, **logging_kwargs)
 
     def critical(self, msg: str, *args, **kwargs) -> None:
         """Log a critical message."""
-        self.logger.critical(msg, *args, **kwargs)
+        logging_kwargs = self._apply_logging_defaults(kwargs)
+        self.logger.critical(msg, *args, **logging_kwargs)
 
     def exception(self, msg: str, *args, **kwargs) -> None:
         """Log an exception message."""
-        self.logger.exception(msg, *args, **kwargs)
+        logging_kwargs = self._apply_logging_defaults(kwargs)
+        self.logger.exception(msg, *args, **logging_kwargs)
 
     def _format_db_context(self) -> str:
         """Format database context for log messages with colors."""
@@ -377,7 +387,12 @@ class DBWardenLogger:
         ctx = self._format_db_context()
         return f"{ctx} {msg}" if ctx else msg
 
-    def _log_best_candidate(self, candidates: Sequence[LogCandidate]) -> None:
+    def _log_best_candidate(
+        self,
+        candidates: Sequence[LogCandidate],
+        *,
+        stacklevel: int = 3,
+    ) -> None:
         """Log the selected message variant for the current logger state.
 
         This helper currently assumes there is one log format for each of these
@@ -396,7 +411,7 @@ class DBWardenLogger:
             for candidate in candidates:
                 if candidate.log_severity_level == logging.DEBUG:
                     message = candidate.message_factory()
-                    self.debug(self._prefixed(message))
+                    self.debug(self._prefixed(message), stacklevel=stacklevel)
                     return
 
         if not self.logger.isEnabledFor(logging.INFO):
@@ -421,7 +436,7 @@ class DBWardenLogger:
         )
 
         message = selected.message_factory()
-        self.info(self._prefixed(message))
+        self.info(self._prefixed(message), stacklevel=stacklevel)
 
     def log_connection_init(self, db_type: str | None = None) -> None:
         """Log database connection initialization."""
@@ -434,7 +449,8 @@ class DBWardenLogger:
                     lambda: "Database connection initialized",
                     Verbosity.NORMAL,
                 ),
-            ]
+            ],
+            stacklevel=4,
         )
 
     def log_pending_migrations(self, migrations: list[str]) -> None:
@@ -447,7 +463,8 @@ class DBWardenLogger:
                         lambda: f"Pending migrations ({len(migrations)}):",
                         Verbosity.NORMAL,
                     ),
-                ]
+                ],
+                stacklevel=4,
             )
             for m in migrations:
                 self._log_best_candidate(
@@ -460,7 +477,8 @@ class DBWardenLogger:
                             ),
                             Verbosity.NORMAL,
                         ),
-                    ]
+                    ],
+                    stacklevel=4,
                 )
 
     def log_migration_start(self, version: str, filename: str) -> None:
@@ -472,7 +490,8 @@ class DBWardenLogger:
                     lambda: f"Starting migration: {filename} (version: {version})",
                     Verbosity.NORMAL,
                 ),
-            ]
+            ],
+            stacklevel=4,
         )
 
     def log_migration_end(self, version: str, filename: str, duration: float) -> None:
@@ -489,7 +508,8 @@ class DBWardenLogger:
                     ),
                     Verbosity.NORMAL,
                 ),
-            ]
+            ],
+            stacklevel=4,
         )
 
     def log_migration_skipped(self, version: str, filename: str, checksum: str) -> None:
@@ -505,7 +525,8 @@ class DBWardenLogger:
                     ),
                     Verbosity.NORMAL,
                 ),
-            ]
+            ],
+            stacklevel=4,
         )
 
     def log_rollback_start(self, version: str, filename: str) -> None:
@@ -517,7 +538,8 @@ class DBWardenLogger:
                     lambda: f"Rolling back migration: {filename} (version: {version})",
                     Verbosity.NORMAL,
                 ),
-            ]
+            ],
+            stacklevel=4,
         )
 
     def log_rollback_end(self, version: str, filename: str, duration: float) -> None:
@@ -533,7 +555,8 @@ class DBWardenLogger:
                     ),
                     Verbosity.NORMAL,
                 ),
-            ]
+            ],
+            stacklevel=4,
         )
 
     def log_sql_statement(self, sql: str) -> None:
@@ -553,7 +576,8 @@ class DBWardenLogger:
                         ]
                     ),
                 ),
-            ]
+            ],
+            stacklevel=4,
         )
 
     def log_backup_created(self, backup_path: str) -> None:
@@ -568,7 +592,8 @@ class DBWardenLogger:
                     ),
                     Verbosity.NORMAL,
                 ),
-            ]
+            ],
+            stacklevel=4,
         )
 
     def log_baseline_set(self, version: str) -> None:
@@ -583,7 +608,8 @@ class DBWardenLogger:
                     ),
                     Verbosity.NORMAL,
                 ),
-            ]
+            ],
+            stacklevel=4,
         )
 
     def log_seed_migration(self, filename: str) -> None:
@@ -598,7 +624,8 @@ class DBWardenLogger:
                     ),
                     Verbosity.NORMAL,
                 ),
-            ]
+            ],
+            stacklevel=4,
         )
 
     def log_model_discovered(self, table_name: str, columns: list) -> None:
@@ -609,7 +636,8 @@ class DBWardenLogger:
                     logging.DEBUG,
                     lambda: f"Discovered model: {table_name} with {len(columns)} columns",
                 ),
-            ]
+            ],
+            stacklevel=4,
         )
 
     def log_model_paths(self, paths: list[str]) -> None:
@@ -620,7 +648,8 @@ class DBWardenLogger:
                     logging.DEBUG,
                     lambda: f"Using model paths: {paths}",
                 ),
-            ]
+            ],
+            stacklevel=4,
         )
 
     def log_table_columns(self, table_name: str, columns: list) -> None:
@@ -634,7 +663,8 @@ class DBWardenLogger:
                         f"{', '.join(c['name'] for c in columns)}"
                     ),
                 ),
-            ]
+            ],
+            stacklevel=4,
         )
 
     def log_migration_sql_gen(self, table_name: str, sql: str) -> None:
@@ -647,7 +677,8 @@ class DBWardenLogger:
                         f"Generated SQL for {table_name}:\n{colorize_sql(sql)}"
                     ),
                 ),
-            ]
+            ],
+            stacklevel=4,
         )
 
 
