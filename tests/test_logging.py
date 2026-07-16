@@ -347,6 +347,9 @@ class TestLogger:
         with pytest.raises(TypeError, match="verbosity must be a Verbosity member"):
             logger.set_verbosity("quiet")
 
+        with pytest.raises(TypeError, match="verbose must be a bool"):
+            logger.set_verbose("yes")
+
     def test_logger_info(self):
         logger = DBWardenLogger(debug_enabled=False)
         logger.info("Test message")
