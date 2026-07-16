@@ -500,8 +500,13 @@ class TestLogger:
                 debug_enabled=True,
                 verbosity=Verbosity.VERBOSE,
             )
+            logger3 = get_logger(
+                debug_enabled=True,
+                verbosity=Verbosity.VERBOSE,
+            )
 
             assert logger1 is logger2
+            assert logger2 is logger3
             assert logger2.debug_enabled is True
             assert logger2.verbosity == Verbosity.VERBOSE
             assert logger2.logger.level == logging.DEBUG

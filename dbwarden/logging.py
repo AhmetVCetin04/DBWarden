@@ -340,9 +340,13 @@ class DBWardenLogger:
 
         Args:
             name: Logger name (default: "dbwarden")
-            verbose: Only here to support current behavior until I learn enough rope to delete the class attribute across the codebase
-            debug_enabled: switches between log.level == log.DEBUG if true and log.level == log.INFO if false
-            verbosity: Enum that determines between the three different INFO logging verbosity settings
+            verbose: Legacy compatibility flag. When ``verbosity`` is not set,
+                ``True`` maps to ``Verbosity.VERBOSE`` and ``False`` falls back
+                to ``Verbosity.NORMAL``.
+            debug_enabled: Switches between ``logging.DEBUG`` when true and
+                ``logging.INFO`` when false.
+            verbosity: Explicit INFO-output verbosity. When provided, it takes
+                precedence over ``verbose``.
             db_name: Database name from multi-db config.
             db_type: Database type (sqlite, postgresql, mysql, mariadb, clickhouse).
         """
@@ -754,7 +758,10 @@ def get_logger(
 
     Args:
         debug_enabled: If True, sets logger to DEBUG level.
-        verbosity: determines the level of density for INFO logs
+        verbose: Legacy compatibility flag. Used only when ``verbosity`` is
+            not provided, where ``True`` maps to ``Verbosity.VERBOSE``.
+        verbosity: Explicit INFO-output verbosity. When provided, it takes
+            precedence over ``verbose``.
         db_name: Database name from multi-db config.
         db_type: Database type (sqlite, postgresql, mysql, mariadb, clickhouse).
 
@@ -775,8 +782,12 @@ def get_logger(
             _global_logger.set_debug_enabled(debug_enabled)
         if verbosity is not None and _global_logger.verbosity != verbosity:
             _global_logger.set_verbosity(verbosity)
-        elif verbosity is None and verbose and _global_logger.verbosity != Verbosity.VERBOSE:
-            _global_logger.set_verbosity(Verbosity.VERBOSE)
+        elif verbosity is None:
+            fallback_verbosity = (
+                Verbosity.VERBOSE if verbose else Verbosity.NORMAL
+            )
+            if _global_logger.verbosity != fallback_verbosity:
+                _global_logger.set_verbosity(fallback_verbosity)
         if db_name is not None:
             _global_logger.db_name = db_name
         if db_type is not None:
