@@ -326,6 +326,8 @@ class DBWardenLogger:
     for migration operations with database context.
     """
 
+    Verbosity = Verbosity
+
     def __init__(
         self,
         name: str = "dbwarden",
